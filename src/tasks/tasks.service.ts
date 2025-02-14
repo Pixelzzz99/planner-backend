@@ -10,15 +10,15 @@ export class TasksService {
     private readonly websocket: WebsocketGateway,
   ) {}
 
-  async createTask(weekPlanId: string, data: CreateTaskDto) {
-    const task = this.prisma.task.create({
-      data: { ...data, weekPlanId },
-    });
+  // async createTask(weekPlanId: string, data: CreateTaskDto) {
+  //   const task = this.prisma.task.create({
+  //     data: { ...data, weekPlanId },
+  //   });
 
-    this.websocket.server.emit('taskUpdated', task);
+  //   this.websocket.server.emit('taskUpdated', task);
 
-    return task;
-  }
+  //   return task;
+  // }
 
   async getTasksForWeek(weekPlanId: string) {
     return this.prisma.task.findMany({
