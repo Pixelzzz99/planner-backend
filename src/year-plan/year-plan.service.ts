@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { MonthPlanService } from 'src/month-plan/month-plan.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class YearPlanService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly monthPlan: MonthPlanService,
+  ) {}
 
   async findOne(userId: string) {
     try {
@@ -25,12 +29,15 @@ export class YearPlanService {
 
   async create(userId: string) {
     try {
-      return await this.prisma.yearPlan.create({
+      const yearPlan = await this.prisma.yearPlan.create({
         data: {
           userId: userId,
           year: new Date().getFullYear(),
         },
       });
+
+      await this.monthPlan.createMonthPlan(yearPlan.id);
+      return yearPlan;
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
         console.log(error);
