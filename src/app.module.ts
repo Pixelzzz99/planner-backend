@@ -5,6 +5,7 @@ import { GoalsModule } from './goals/goals.module';
 import { TasksModule } from './tasks/tasks.module';
 import { CategoriesModule } from './categories/categories.module';
 import { AuthModule } from './auth/auth.module';
+import { YearPlanModule } from './year-plan/year-plan.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
     TasksModule,
     CategoriesModule,
     AuthModule,
+    YearPlanModule,
   ],
   controllers: [],
   providers: [],
