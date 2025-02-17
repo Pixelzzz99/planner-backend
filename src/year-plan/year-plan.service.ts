@@ -15,7 +15,11 @@ export class YearPlanService {
       return await this.prisma.yearPlan.findMany({
         where: { userId: userId },
         include: {
-          months: true,
+          months: {
+            include: {
+              weekPlans: true,
+            },
+          },
         },
       });
     } catch (error) {
@@ -29,10 +33,21 @@ export class YearPlanService {
 
   async create(userId: string) {
     try {
+      const existingYearPlan = await this.prisma.yearPlan.findMany({
+        where: { userId: userId, year: new Date().getFullYear() },
+      });
+      if (existingYearPlan.length > 0) {
+        return existingYearPlan[0];
+      }
+
       const yearPlan = await this.prisma.yearPlan.create({
         data: {
-          userId: userId,
           year: new Date().getFullYear(),
+          user: {
+            connect: {
+              id: userId,
+            },
+          },
         },
       });
 
