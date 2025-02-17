@@ -7,6 +7,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { AuthModule } from './auth/auth.module';
 import { YearPlanModule } from './year-plan/year-plan.module';
 import { MonthPlanModule } from './month-plan/month-plan.module';
+import { WeekPlanModule } from './week-plan/week-plan.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MonthPlanModule } from './month-plan/month-plan.module';
     AuthModule,
     YearPlanModule,
     MonthPlanModule,
+    WeekPlanModule,
   ],
   controllers: [],
   providers: [],

@@ -21,9 +21,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  goals      Goal[]
-  yearPlans  YearPlan[]
-  categories Category[]
+  goals       Goal[]
+  yearPlans   YearPlan[]
+  categories  Category[]
+  taskArchive TaskArchive[]
 }
 
 model Goal {
@@ -120,6 +121,8 @@ enum TaskStatus {
 
 model TaskArchive {
   id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   taskId     String   @db.Uuid
   task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   weekPlanId String   @db.Uuid
