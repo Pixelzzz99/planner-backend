@@ -1,7 +1,14 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Get,
+  Injectable,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
 export class AuthService {
@@ -11,6 +18,9 @@ export class AuthService {
   ) {}
 
   async register(email: string, name: string, password: string) {
+    if (await this.usersService.getUserByEmail(email)) {
+      throw new UnauthorizedException('Email is already in use');
+    }
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await this.usersService.createUser({
       email,
@@ -33,5 +43,9 @@ export class AuthService {
   generateToken(userId: string) {
     const payload = { sub: userId };
     return { accessToken: this.jwtService.sign(payload) };
+  }
+
+  async me(userId: string) {
+    return this.usersService.getUserById(userId);
   }
 }

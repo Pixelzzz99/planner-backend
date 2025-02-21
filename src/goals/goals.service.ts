@@ -13,7 +13,6 @@ export class GoalsService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
-
       return await this.prisma.goal.create({
         data: {
           ...data,
