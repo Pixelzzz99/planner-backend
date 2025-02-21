@@ -18,7 +18,7 @@ export class GoalsService {
   async getUserGoals(userId: string) {
     return this.prisma.goal.findMany({
       where: {
-        userId,
+        userId: userId,
       },
     });
   }
