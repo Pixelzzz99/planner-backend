@@ -1,0 +1,3 @@
+ancestorEntries = ["package-lock.json", "package.json", "src/auth/auth.controller.ts", "src/main.ts", "src/users/users.service.ts"]
+ourEntries = ["package-lock.json", "package.json", "src/auth/auth.controller.ts", "src/main.ts", "src/users/users.service.ts"]
+theirEntries = ["package-lock.json", "package.json", "src/auth/auth.controller.ts", "src/main.ts", "src/users/users.service.ts"]
