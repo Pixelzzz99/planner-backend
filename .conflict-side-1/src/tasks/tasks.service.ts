@@ -10,15 +10,29 @@ export class TasksService {
     private readonly websocket: WebsocketGateway,
   ) {}
 
-  // async createTask(weekPlanId: string, data: CreateTaskDto) {
-  //   const task = this.prisma.task.create({
-  //     data: { ...data, weekPlanId },
-  //   });
+  async createTask(weekPlanId: string, data: CreateTaskDto) {
+    const { categoryId, ...taskData } = data;
+    try {
+      const task = await this.prisma.task.create({
+        data: {
+          ...taskData,
+          category: {
+            connect: { id: categoryId },
+          },
+          weekPlan: {
+            connect: { id: weekPlanId },
+          },
+        },
+      });
 
-  //   this.websocket.server.emit('taskUpdated', task);
+      this.websocket.server.emit('taskCreated', task);
 
-  //   return task;
-  // }
+      return task;
+    } catch (error) {
+      console.error('Error creating task:', error);
+      throw error;
+    }
+  }
 
   async getTasksForWeek(weekPlanId: string) {
     return this.prisma.task.findMany({

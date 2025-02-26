@@ -1,3 +1,3 @@
-ancestorEntries = ["src/week-plan/week-plan.module.ts"]
-ourEntries = ["src/week-plan/week-plan.controller.ts", "src/week-plan/week-plan.module.ts"]
-theirEntries = ["src/week-plan/week-plan.controller.ts", "src/week-plan/week-plan.module.ts"]
+ancestorEntries = ["src/tasks/dto/create-task.dto.ts", "src/tasks/tasks.service.ts", "src/week-plan/week-plan.controller.ts"]
+ourEntries = ["src/tasks/dto/create-task.dto.ts", "src/tasks/tasks.service.ts", "src/week-plan/week-plan.controller.ts"]
+theirEntries = ["src/tasks/dto/create-task.dto.ts", "src/tasks/tasks.service.ts", "src/week-plan/week-plan.controller.ts"]

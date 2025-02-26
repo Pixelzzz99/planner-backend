@@ -30,7 +30,6 @@ export class UsersService {
   }
 
   async getUserById(id: string) {
-
     try {
       return await this.prisma.user.findUnique({
         select: {
