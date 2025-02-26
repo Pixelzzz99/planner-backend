@@ -30,15 +30,15 @@ export class UsersService {
   }
 
   async getUserById(id: string) {
-
     try {
-      return await this.prisma.user.findUnique(
-       select: {
-        id: true,
-        email: true,
-        name: true,
-      }, 
-        { where: { id } });
+      return await this.prisma.user.findUnique({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+        where: { id },
+      });
     } catch (error) {
       console.error('Error fetching user by id:', error);
       if (error instanceof PrismaClientKnownRequestError) {
