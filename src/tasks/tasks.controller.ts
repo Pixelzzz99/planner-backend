@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto, UpdateTaskDto } from './dto';
@@ -20,6 +21,11 @@ export class TasksController {
   @Get(':weekPlanId')
   getTasksForWeek(@Param('weekPlanId') weekPlanId: string) {
     return this.taskService.getTasksForWeek(weekPlanId);
+  }
+
+  @Post()
+  createTask(@Query('weekId') weekPlanId: string, @Body() data: CreateTaskDto) {
+    return this.taskService.createTask(weekPlanId, data);
   }
 
   @Patch(':id')

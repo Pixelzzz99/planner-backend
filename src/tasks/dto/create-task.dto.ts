@@ -6,4 +6,6 @@ export class CreateTaskDto {
   duration: number;
   categoryId: string;
   status: TaskStatus;
+  day: number;
+  date: Date;
 }
