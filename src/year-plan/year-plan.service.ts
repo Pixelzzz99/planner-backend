@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { MonthPlanService } from 'src/month-plan/month-plan.service';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -33,21 +33,21 @@ export class YearPlanService {
 
   async create(userId: string) {
     try {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
       const existingYearPlan = await this.prisma.yearPlan.findMany({
         where: { userId: userId, year: new Date().getFullYear() },
       });
       if (existingYearPlan.length > 0) {
         return existingYearPlan[0];
       }
-
       const yearPlan = await this.prisma.yearPlan.create({
         data: {
           year: new Date().getFullYear(),
-          user: {
-            connect: {
-              id: userId,
-            },
-          },
+          userId: userId,
         },
       });
 

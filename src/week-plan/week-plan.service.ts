@@ -10,9 +10,14 @@ export class WeekPlanService {
 
   async createWeekPlan(monthPlanId: string, data: CreateWeekPlanDto) {
     try {
+      const formattedData = {
+        ...data,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+      };
       return await this.prisma.weekPlan.create({
         data: {
-          ...data,
+          ...formattedData,
           monthPlanId,
         },
       });
