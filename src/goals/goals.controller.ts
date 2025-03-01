@@ -29,7 +29,6 @@ export class GoalsController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() data: UpdateGoalDto) {
-    console.log(data);
     return this.goalsService.updateGoal(id, data);
   }
 
