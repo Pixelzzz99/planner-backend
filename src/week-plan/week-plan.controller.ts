@@ -7,6 +7,7 @@ import {
   Query,
   Body,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 import { WeekPlanService } from './week-plan.service';
 import { CreateWeekPlanDto } from './dto/create-week.dto';
@@ -27,8 +28,8 @@ export class WeekPlanController {
     return this.weekPlanService.getWeekPlans(weekPlanId);
   }
 
-  @Delete()
-  async deleteWeekPlan(@Query('weeksId') weekPlanId: string) {
+  @Delete(':weekId')
+  async deleteWeekPlan(@Param('weekId') weekPlanId: string) {
     return this.weekPlanService.deleteWeekPlan(weekPlanId);
   }
 }

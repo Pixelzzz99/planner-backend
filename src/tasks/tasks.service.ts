@@ -103,6 +103,7 @@ export class TasksService {
               name: true,
             },
           },
+          weekPlan: true,
         },
       });
     } catch (error) {
@@ -130,9 +131,23 @@ export class TasksService {
         data.date = parsedDate;
       }
 
+      const { categoryId, weekPlanId, ...updateData } = data;
+
       const task = await this.prisma.task.update({
         where: { id },
-        data,
+        data: {
+          ...updateData,
+          ...(categoryId && {
+            category: {
+              connect: { id: categoryId },
+            },
+          }),
+          ...(weekPlanId && {
+            weekPlan: {
+              connect: { id: weekPlanId },
+            },
+          }),
+        },
         include: {
           category: {
             select: {
@@ -145,6 +160,7 @@ export class TasksService {
       this.websocket.server.emit('taskUpdated', task);
       return task;
     } catch (error) {
+      console.log(error);
       if (error instanceof HttpException) {
         throw error;
       }
