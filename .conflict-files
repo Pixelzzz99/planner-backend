@@ -1,3 +1,0 @@
-ancestorEntries = ["prisma/schema.prisma", "src/main.ts", "src/tasks/dto/create-task.dto.ts", "src/tasks/tasks.service.ts"]
-ourEntries = ["prisma/schema.prisma", "src/main.ts", "src/tasks/dto/create-task.dto.ts", "src/tasks/tasks.service.ts"]
-theirEntries = ["prisma/schema.prisma", "src/main.ts", "src/tasks/dto/create-task.dto.ts", "src/tasks/tasks.service.ts"]
