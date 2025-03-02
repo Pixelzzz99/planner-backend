@@ -94,7 +94,7 @@ model Task {
   weekPlanId  String     @db.Uuid
   weekPlan    WeekPlan   @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
   title       String
-  description String
+  description String?
   priority    Priority
   duration    Int
   day         Int

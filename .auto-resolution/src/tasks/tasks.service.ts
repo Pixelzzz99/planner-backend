@@ -112,6 +112,7 @@ export class TasksService {
       return await this.prisma.task.findMany({
         where: { weekPlanId },
         include: {
+          date: parsedDate,
           category: {
             select: {
               name: true,
@@ -169,6 +170,13 @@ export class TasksService {
             },
           },
         },
+        include: {
+          category: {
+            select: {
+              name: true,
+            },
+          },
+        },
       });
 
       this.websocket.server.emit('taskUpdated', task);
@@ -201,7 +209,6 @@ export class TasksService {
           },
         },
       });
-
       this.websocket.server.emit('taskDeleted', task);
       return task;
     } catch (error) {
