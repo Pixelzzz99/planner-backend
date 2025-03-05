@@ -1,0 +1,3 @@
+ancestorEntries = ["src/auth/auth.service.ts"]
+ourEntries = ["src/auth/auth.service.ts"]
+theirEntries = ["src/auth/auth.service.ts"]
