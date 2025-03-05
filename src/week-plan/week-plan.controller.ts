@@ -23,8 +23,8 @@ export class WeekPlanController {
     return this.weekPlanService.createWeekPlan(data.monthPlanId, data);
   }
 
-  @Get()
-  async getWeekPlans(@Query('weekId') weekPlanId: string) {
+  @Get(':weekId')
+  async getWeekPlans(@Param('weekId') weekPlanId: string) {
     return this.weekPlanService.getWeekPlans(weekPlanId);
   }
 
