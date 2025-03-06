@@ -416,4 +416,86 @@ export class TasksService {
       throw new InternalServerErrorException('Failed to fix positions');
     }
   }
+
+  async moveTask(
+    taskId: string,
+    data: { weekPlanId?: string; day?: number; date?: Date },
+  ) {
+    try {
+      const task = await this.prisma.task.update({
+        where: { id: taskId },
+        data: {
+          ...data,
+          // Если задача перемещается из архива, снимаем флаг архивации
+          ...(data.weekPlanId && {
+            isArchived: false,
+            archiveReason: null,
+            archivedAt: null,
+          }),
+        },
+        include: {
+          category: true,
+          weekPlan: true,
+        },
+      });
+
+      this.websocket.server.emit('taskMoved', task);
+      return task;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        throw new HttpException(
+          'Invalid task move operation',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      throw new InternalServerErrorException('Failed to move task');
+    }
+  }
+
+  async archiveTask(taskId: string, reason: string) {
+    try {
+      const task = await this.prisma.task.update({
+        where: { id: taskId },
+        data: {
+          isArchived: true,
+          archiveReason: reason,
+          archivedAt: new Date(),
+        },
+        include: {
+          category: true,
+        },
+      });
+
+      this.websocket.server.emit('taskArchived', task);
+      return task;
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to archive task');
+    }
+  }
+
+  async getArchivedTasks(userId: string) {
+    try {
+      return await this.prisma.task.findMany({
+        where: {
+          isArchived: true,
+          category: {
+            userId: userId,
+          },
+        },
+        include: {
+          category: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          archivedAt: 'desc',
+        },
+      });
+    } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException('Failed to fetch archived tasks');
+    }
+  }
 }

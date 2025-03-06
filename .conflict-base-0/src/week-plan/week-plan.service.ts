@@ -31,10 +31,10 @@ export class WeekPlanService {
     }
   }
 
-  async getWeekPlans(monthPlanId: string) {
+  async getWeekPlans(weekPlanId: string) {
     try {
-      return await this.prisma.weekPlan.findMany({
-        where: { monthPlanId },
+      return await this.prisma.weekPlan.findUnique({
+        where: { id: weekPlanId },
         include: {
           tasks: true,
           focus: true,
