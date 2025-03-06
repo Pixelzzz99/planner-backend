@@ -36,7 +36,14 @@ export class WeekPlanService {
       return await this.prisma.weekPlan.findUnique({
         where: { id: weekPlanId },
         include: {
-          tasks: true,
+          tasks: {
+            where: {
+              isArchived: false, // Получаем только неархивированные задачи
+            },
+            include: {
+              category: true,
+            },
+          },
           focus: true,
         },
       });
