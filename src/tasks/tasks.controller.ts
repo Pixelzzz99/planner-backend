@@ -46,13 +46,13 @@ export class TasksController {
   ) {
     return this.taskService.moveTask(id, {
       ...moveData,
-      date: moveData.date ? new Date(moveData.date) : undefined,
+      date: moveData.date ? moveData.date : undefined,
     });
   }
 
-  @Patch(':id/archive')
-  archiveTask(@Param('id') id: string, @Body('reason') reason: string) {
-    return this.taskService.archiveTask(id, reason);
+  @Patch('positions')
+  updatePositions(@Body() updates: { id: string; position: number }[]) {
+    return this.taskService.updatePositions(updates);
   }
 
   @Delete(':id')

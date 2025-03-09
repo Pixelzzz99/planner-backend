@@ -38,10 +38,13 @@ export class WeekPlanService {
         include: {
           tasks: {
             where: {
-              isArchived: false, // Получаем только неархивированные задачи
+              isArchived: false,
             },
             include: {
               category: true,
+            },
+            orderBy: {
+              position: 'asc',
             },
           },
           focus: true,
