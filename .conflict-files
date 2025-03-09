@@ -1,3 +1,0 @@
-ancestorEntries = ["src/tasks/tasks.service.ts"]
-ourEntries = ["src/tasks/tasks.service.ts"]
-theirEntries = ["src/tasks/tasks.service.ts"]
