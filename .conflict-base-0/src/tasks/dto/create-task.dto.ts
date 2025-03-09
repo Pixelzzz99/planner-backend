@@ -25,6 +25,10 @@ export class CreateTaskDto {
   @IsNotEmpty()
   duration: number;
 
+  @IsNumber()
+  @IsOptional()
+  position?: number;
+
   @IsUUID()
   categoryId: string;
 

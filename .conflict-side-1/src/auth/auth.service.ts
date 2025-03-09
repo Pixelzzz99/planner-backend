@@ -73,4 +73,8 @@ export class AuthService {
   async me(userId: string) {
     return this.usersService.getUserById(userId);
   }
+
+  async me(userId: string) {
+    return this.usersService.getUserById(userId);
+  }
 }

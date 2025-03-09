@@ -417,29 +417,46 @@ export class TasksService {
     }
   }
 
-  async moveTask(
-    taskId: string,
-    data: { weekPlanId?: string; day?: number; date?: Date },
-  ) {
+  async moveTask(taskId: string, moveData: MoveTaskDto) {
     try {
+      const { position, toArchive, archiveReason, date, ...restData } =
+        moveData;
+
+      const updateData: any = {
+        ...restData,
+        ...(date && { date: new Date(date) }),
+      };
+
+      if (position !== undefined) {
+        updateData.position = position;
+      }
+
+      // Если перемещаем в архив
+      if (toArchive) {
+        updateData.isArchived = true;
+        updateData.archiveReason = archiveReason;
+        updateData.archivedAt = new Date();
+      }
+
+      // Если перемещаем из архива в неделю
+      if (moveData.weekPlanId && !toArchive) {
+        updateData.isArchived = false;
+        updateData.archiveReason = null;
+        updateData.archivedAt = null;
+      }
+
       const task = await this.prisma.task.update({
         where: { id: taskId },
-        data: {
-          ...data,
-          // Если задача перемещается из архива, снимаем флаг архивации
-          ...(data.weekPlanId && {
-            isArchived: false,
-            archiveReason: null,
-            archivedAt: null,
-          }),
-        },
+        data: updateData,
         include: {
           category: true,
           weekPlan: true,
         },
       });
 
-      this.websocket.server.emit('taskMoved', task);
+      const eventName = toArchive ? 'taskArchived' : 'taskMoved';
+      this.websocket.server.emit(eventName, task);
+
       return task;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -449,27 +466,6 @@ export class TasksService {
         );
       }
       throw new InternalServerErrorException('Failed to move task');
-    }
-  }
-
-  async archiveTask(taskId: string, reason: string) {
-    try {
-      const task = await this.prisma.task.update({
-        where: { id: taskId },
-        data: {
-          isArchived: true,
-          archiveReason: reason,
-          archivedAt: new Date(),
-        },
-        include: {
-          category: true,
-        },
-      });
-
-      this.websocket.server.emit('taskArchived', task);
-      return task;
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to archive task');
     }
   }
 
@@ -496,6 +492,23 @@ export class TasksService {
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException('Failed to fetch archived tasks');
+    }
+  }
+
+  async updatePositions(updates: { id: string; position: number }[]) {
+    try {
+      await this.prisma.$transaction(
+        updates.map(({ id, position }) =>
+          this.prisma.task.update({
+            where: { id },
+            data: { position },
+          }),
+        ),
+      );
+
+      return { success: true };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to update task positions');
     }
   }
 }
