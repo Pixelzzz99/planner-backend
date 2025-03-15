@@ -52,6 +52,10 @@ export class GoalsService {
 
   async updateGoal(id: string, data: UpdateGoalDto) {
     try {
+      const goal = await this.prisma.goal.findUnique({ where: { id } });
+      if (!goal) {
+        throw new NotFoundException('Goal not found');
+      }
       return await this.prisma.goal.update({
         where: { id },
         data,

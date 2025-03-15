@@ -10,9 +10,14 @@ export class WeekPlanService {
 
   async createWeekPlan(monthPlanId: string, data: CreateWeekPlanDto) {
     try {
+      const formattedData = {
+        ...data,
+        startDate: new Date(data.startDate),
+        endDate: new Date(data.endDate),
+      };
       return await this.prisma.weekPlan.create({
         data: {
-          ...data,
+          ...formattedData,
           monthPlanId,
         },
       });
@@ -26,12 +31,22 @@ export class WeekPlanService {
     }
   }
 
-  async getWeekPlans(monthPlanId: string) {
+  async getWeekPlans(weekPlanId: string) {
     try {
-      return await this.prisma.weekPlan.findMany({
-        where: { monthPlanId },
+      return await this.prisma.weekPlan.findUnique({
+        where: { id: weekPlanId },
         include: {
-          tasks: true,
+          tasks: {
+            where: {
+              isArchived: false,
+            },
+            include: {
+              category: true,
+            },
+            orderBy: {
+              position: 'asc',
+            },
+          },
           focus: true,
         },
       });
