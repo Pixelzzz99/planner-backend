@@ -27,7 +27,9 @@ export class TasksService {
     weekPlanId: string,
     day: number,
   ): Promise<number> {
+
     const tasks = await this.prisma.task.findMany({
+
       where: {
         weekPlanId,
         day,
@@ -84,6 +86,7 @@ export class TasksService {
         this.websocket.server.emit('taskCreated', task);
         return task;
       });
+
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -93,6 +96,7 @@ export class TasksService {
           );
         }
       }
+
       if (error instanceof HttpException) {
         throw error;
       }
