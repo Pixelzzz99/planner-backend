@@ -51,6 +51,7 @@ export class TasksController {
   @Post('fix-positions')
   async fixPositions() {
     return this.taskService.fixAllPositions();
+  }
 
   @Delete(':id')
   deleteTask(@Param('id') id: string) {
