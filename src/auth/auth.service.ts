@@ -12,6 +12,8 @@ import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
 export class AuthService {
+  private invalidatedTokens: Set<string> = new Set();
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -40,9 +42,32 @@ export class AuthService {
     return this.generateToken(user.id);
   }
 
-  generateToken(userId: string) {
-    const payload = { sub: userId };
-    return { accessToken: this.jwtService.sign(payload) };
+  async generateToken(userId: string) {
+    const user = await this.usersService.getUserById(userId);
+    const payload = {
+      sub: userId,
+      email: user.email,
+      name: user.name,
+      iat: Math.floor(Date.now() / 1000),
+    };
+    const token = this.jwtService.sign(payload);
+    return { accessToken: token };
+  }
+
+  async logout(token: string) {
+    this.invalidatedTokens.add(token);
+    // Очистка старых токенов (older than 24h)
+    setTimeout(
+      () => {
+        this.invalidatedTokens.delete(token);
+      },
+      24 * 60 * 60 * 1000,
+    );
+    return { message: 'Logged out successfully' };
+  }
+
+  isTokenInvalid(token: string): boolean {
+    return this.invalidatedTokens.has(token);
   }
 
   async me(userId: string) {
