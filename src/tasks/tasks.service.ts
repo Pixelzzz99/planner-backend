@@ -258,6 +258,10 @@ export class TasksService {
           newPosition = (prevItemPosition + nextItemPosition) / 2;
         }
 
+        if (Math.random() < 0.01) {
+          await this.fixAllPositions();
+        }
+
         return tx.task.update({
           where: { id: taskId },
           data: {
