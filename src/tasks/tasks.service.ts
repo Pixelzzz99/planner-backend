@@ -27,9 +27,7 @@ export class TasksService {
     weekPlanId: string,
     day: number,
   ): Promise<number> {
-
     const tasks = await this.prisma.task.findMany({
-
       where: {
         weekPlanId,
         day,
@@ -86,7 +84,6 @@ export class TasksService {
         this.websocket.server.emit('taskCreated', task);
         return task;
       });
-
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -219,122 +216,56 @@ export class TasksService {
   async moveTask(taskId: string, moveData: MoveTaskDto) {
     try {
       const {
+        targetTaskId,
         position,
         toArchive,
         archiveReason,
         date,
         day,
         weekPlanId,
-        ...restData
       } = moveData;
 
-      // Получаем текущую задачу
-      const currentTask = await this.prisma.task.findUnique({
-        where: { id: taskId },
-        include: { weekPlan: true },
-      });
-
-      if (!currentTask) {
-        throw new TaskNotFoundException(taskId);
-      }
-
-      const updateData: any = {
-        ...restData,
-        ...(date && { date: new Date(date) }),
-      };
-
-      // Обработка перемещения между днями или в рамках одного дня
-      if (!toArchive && (day !== undefined || position !== undefined)) {
-        const targetWeekPlanId = weekPlanId || currentTask.weekPlanId;
-        const targetDay = day ?? currentTask.day;
-
-        // Получаем все задачи целевого дня
-        const tasksInTargetDay = await this.prisma.task.findMany({
-          where: {
-            weekPlanId: targetWeekPlanId,
-            day: targetDay,
-            isArchived: false,
-            id: { not: taskId }, // Исключаем текущую задачу
-          },
-          orderBy: { position: 'asc' },
-        });
-
-        // Определяем новую позицию
+      return this.prisma.$transaction(async (tx) => {
+        const [targetItem, siblingItem] = await Promise.all([
+          tx.task.findUnique({ where: { id: targetTaskId, day, weekPlanId } }),
+          tx.task.findMany({
+            where: {
+              day,
+            },
+            orderBy: { position: 'asc' },
+            select: { id: true, position: true },
+          }),
+        ]);
         let newPosition: number;
-        if (position === undefined) {
-          // Если позиция не указана, ставим в конец
-          newPosition =
-            tasksInTargetDay.length > 0
-              ? tasksInTargetDay[tasksInTargetDay.length - 1].position + 1024
-              : 0;
+
+        const targetIndex = siblingItem.findIndex(
+          (item) => item.id === targetTaskId,
+        );
+        const newIndex = position === 'before' ? targetIndex : targetIndex + 1;
+
+        const prevItem = siblingItem[newIndex - 1];
+        const nextItem = siblingItem[newIndex];
+
+        if (!prevItem && !nextItem) {
+          newPosition = 1.0;
+        } else if (!prevItem) {
+          newPosition = nextItem.position - 1024;
+        } else if (!nextItem) {
+          newPosition = prevItem.position + 1024;
         } else {
-          // Если вставляем между задачами
-          const targetIndex = tasksInTargetDay.findIndex(
-            (t) => t.position >= position,
-          );
-          if (targetIndex === -1) {
-            newPosition = position;
-          } else {
-            // Сдвигаем все последующие задачи
-            await this.prisma.task.updateMany({
-              where: {
-                weekPlanId: targetWeekPlanId,
-                day: targetDay,
-                position: { gte: position },
-              },
-              data: {
-                position: { increment: 1024 },
-              },
-            });
-            newPosition = position;
-          }
+          const prevItemPosition = prevItem.position;
+          const nextItemPosition = nextItem.position;
+          newPosition = (prevItemPosition + nextItemPosition) / 2;
         }
 
-        updateData.position = newPosition;
-        updateData.day = targetDay;
-        if (weekPlanId) updateData.weekPlanId = weekPlanId;
-      }
-
-      // Обработка архивации
-      if (toArchive) {
-        updateData.isArchived = true;
-        updateData.archiveReason = archiveReason;
-        updateData.archivedAt = new Date();
-
-        // Пересчитываем позиции оставшихся задач
-        await this.prisma.task.updateMany({
-          where: {
-            weekPlanId: currentTask.weekPlanId,
-            day: currentTask.day,
-            position: { gt: currentTask.position },
-            isArchived: false,
-          },
+        return tx.task.update({
+          where: { id: taskId },
           data: {
-            position: { decrement: 1024 },
+            position: newPosition,
+            day,
           },
         });
-      }
-
-      // Если возвращаем из архива
-      if (weekPlanId && !toArchive) {
-        updateData.isArchived = false;
-        updateData.archiveReason = null;
-        updateData.archivedAt = null;
-      }
-
-      const task = await this.prisma.task.update({
-        where: { id: taskId },
-        data: updateData,
-        include: {
-          category: true,
-          weekPlan: true,
-        },
       });
-
-      const eventName = toArchive ? 'taskArchived' : 'taskMoved';
-      this.websocket.server.emit(eventName, task);
-
-      return task;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         throw new HttpException(
@@ -374,13 +305,13 @@ export class TasksService {
 
   async fixAllPositions() {
     try {
-      // Получаем все неархивированные задачи, сгруппированные по weekPlanId и дню
+      // Получаем все неархивированные задачи
       const tasks = await this.prisma.task.findMany({
         where: {
           isArchived: false,
         },
         orderBy: {
-          createdAt: 'asc', // сортируем по дате создания, чтобы сохранить исходный порядок
+          position: 'asc',
         },
       });
 
@@ -396,14 +327,17 @@ export class TasksService {
         },
         {} as Record<string, any[]>,
       );
-
       // Обновляем позиции для каждой группы
       for (const tasks of Object.values(groupedTasks)) {
-        for (let i = 0; i < tasks.length; i++) {
+        // Начинаем с 1.0 и увеличиваем на 1024 для каждой следующей задачи
+        let currentPosition = 1.0;
+
+        for (let i = 1; i <= tasks.length; i++) {
           await this.prisma.task.update({
-            where: { id: tasks[i].id },
-            data: { position: i * 1024 },
+            where: { id: tasks[i - 1].id },
+            data: { position: currentPosition },
           });
+          currentPosition += 1024;
         }
       }
 

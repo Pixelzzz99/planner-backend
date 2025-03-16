@@ -29,6 +29,10 @@ export class MoveTaskDto {
   archiveReason?: string;
 
   @IsOptional()
-  @IsNumber()
-  position?: number;
+  @IsString()
+  targetTaskId?: string;
+
+  @IsOptional()
+  @IsString()
+  position: 'before' | 'after';
 }
