@@ -224,8 +224,21 @@ export class TasksService {
         day,
         weekPlanId,
       } = moveData;
+      // console.log(moveData);
 
       return this.prisma.$transaction(async (tx) => {
+        // Если targetTaskId не указан, значит переносим в пустой день
+        if (!targetTaskId) {
+          return tx.task.update({
+            where: { id: taskId },
+            data: {
+              position: 1 + 1024, // Базовая позиция для первой задачи
+              day,
+              weekPlanId,
+            },
+          });
+        }
+
         const [targetItem, siblingItem] = await Promise.all([
           tx.task.findUnique({ where: { id: targetTaskId, day, weekPlanId } }),
           tx.task.findMany({
