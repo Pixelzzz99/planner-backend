@@ -231,9 +231,10 @@ export class TasksService {
           tx.task.findMany({
             where: {
               day,
+              weekPlanId,
             },
             orderBy: { position: 'asc' },
-            select: { id: true, position: true },
+            select: { id: true, position: true, title: true },
           }),
         ]);
         let newPosition: number;
