@@ -37,7 +37,7 @@ export class TasksService {
       orderBy: { position: 'desc' },
       take: 1,
     });
-    return tasks.length > 0 ? tasks[0].position + 1024 : 0;
+    return tasks.length > 0 ? tasks[0].position + 1024 : 1;
   }
 
   async createTask(weekPlanId: string, data: CreateTaskDto) {
@@ -251,17 +251,100 @@ export class TasksService {
     });
   }
 
+  private async archiveTask(
+    tx: Prisma.TransactionClient,
+    taskId: string,
+    reason?: string,
+  ) {
+    return tx.task.update({
+      where: { id: taskId },
+      data: {
+        isArchived: true,
+        archivedAt: new Date(),
+        archiveReason: reason || null,
+      },
+      include: {
+        category: {
+          select: { name: true },
+        },
+      },
+    });
+  }
+
+  private async unarchiveTask(
+    tx: Prisma.TransactionClient,
+    taskId: string,
+    day: number,
+    weekPlanId: string,
+  ) {
+    const position = await this.getLastPosition(weekPlanId, day);
+
+    return tx.task.update({
+      where: { id: taskId },
+      data: {
+        isArchived: false,
+        archivedAt: null,
+        archiveReason: null,
+        position,
+        day,
+        weekPlan: { connect: { id: weekPlanId } },
+      },
+      include: {
+        category: {
+          select: { name: true },
+        },
+      },
+    });
+  }
+
   async moveTask(taskId: string, moveData: MoveTaskDto) {
     try {
-      const { targetTaskId, position, day, weekPlanId } = moveData;
-
+      const {
+        targetTaskId,
+        position,
+        isArchive,
+        archiveReason,
+        day,
+        weekPlanId,
+      } = moveData;
+      //TODO: надо бы позиционность в архиве учитывать думаю также
       return this.prisma.$transaction(async (tx) => {
+        // Проверяем существование задачи
+        const task = await tx.task.findUnique({ where: { id: taskId } });
+        if (!task) {
+          throw new TaskNotFoundException(taskId);
+        }
+
+        // Обработка архивации/разархивации
+        if (isArchive !== undefined) {
+          console.log('here');
+          if (isArchive && !task.isArchived) {
+            const archivedTask = await this.archiveTask(
+              tx,
+              taskId,
+              archiveReason,
+            );
+            this.websocket.server.emit('taskArchived', archivedTask);
+            return archivedTask;
+          } else if (!isArchive && task.isArchived) {
+            const unarchivedTask = await this.unarchiveTask(
+              tx,
+              taskId,
+              day,
+              weekPlanId,
+            );
+            this.websocket.server.emit('taskUnarchived', unarchivedTask);
+            return unarchivedTask;
+          }
+        }
+
+        // Если это не архивация/разархивация, обрабатываем как обычное перемещение
         if (!targetTaskId) {
           return this.moveToEmptyDay(tx, taskId, day, weekPlanId);
         }
 
+        // ...existing moveTask logic...
         const siblingTasks = await this.getSiblingTasks(tx, day, weekPlanId);
-
         const targetIndex = siblingTasks.findIndex(
           (item) => item.id === targetTaskId,
         );
@@ -276,19 +359,29 @@ export class TasksService {
           await this.fixAllPositions();
         }
 
-        return tx.task.update({
+        const updatedTask = await tx.task.update({
           where: { id: taskId },
           data: { position: newPosition, day },
+          include: {
+            category: {
+              select: { name: true },
+            },
+          },
         });
+
+        this.websocket.server.emit('taskMoved', updatedTask);
+        return updatedTask;
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         throw new HttpException(
-          'Invalid task move operation',
+          'Invalid task operation',
           HttpStatus.BAD_REQUEST,
         );
       }
-      throw new InternalServerErrorException('Failed to move task');
+      throw new InternalServerErrorException(
+        'Failed to process task operation',
+      );
     }
   }
 
