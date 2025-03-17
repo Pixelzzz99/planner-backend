@@ -213,64 +213,64 @@ export class TasksService {
     }
   }
 
-  async moveTask(taskId: string, moveData: MoveTaskDto) {
-    try {
-      const {
-        targetTaskId,
-        position,
-        toArchive,
-        archiveReason,
-        date,
+  private calculatePosition(
+    prevItem: { position: number } | undefined,
+    nextItem: { position: number } | undefined,
+  ): number {
+    if (!prevItem && !nextItem) return 1024;
+    if (!prevItem) return nextItem!.position - 1024;
+    if (!nextItem) return prevItem.position + 1024;
+    return (prevItem.position + nextItem.position) / 2;
+  }
+
+  private async moveToEmptyDay(
+    tx: Prisma.TransactionClient,
+    taskId: string,
+    day: number,
+    weekPlanId: string,
+  ) {
+    return tx.task.update({
+      where: { id: taskId },
+      data: {
+        position: 1 + 1024,
         day,
         weekPlanId,
-      } = moveData;
-      // console.log(moveData);
+      },
+    });
+  }
+
+  private async getSiblingTasks(
+    tx: Prisma.TransactionClient,
+    day: number,
+    weekPlanId: string,
+  ) {
+    return tx.task.findMany({
+      where: { day, weekPlanId },
+      orderBy: { position: 'asc' },
+      select: { id: true, position: true, title: true },
+    });
+  }
+
+  async moveTask(taskId: string, moveData: MoveTaskDto) {
+    try {
+      const { targetTaskId, position, day, weekPlanId } = moveData;
 
       return this.prisma.$transaction(async (tx) => {
-        // Если targetTaskId не указан, значит переносим в пустой день
         if (!targetTaskId) {
-          return tx.task.update({
-            where: { id: taskId },
-            data: {
-              position: 1 + 1024, // Базовая позиция для первой задачи
-              day,
-              weekPlanId,
-            },
-          });
+          return this.moveToEmptyDay(tx, taskId, day, weekPlanId);
         }
 
-        const [targetItem, siblingItem] = await Promise.all([
-          tx.task.findUnique({ where: { id: targetTaskId, day, weekPlanId } }),
-          tx.task.findMany({
-            where: {
-              day,
-              weekPlanId,
-            },
-            orderBy: { position: 'asc' },
-            select: { id: true, position: true, title: true },
-          }),
-        ]);
-        let newPosition: number;
+        const siblingTasks = await this.getSiblingTasks(tx, day, weekPlanId);
 
-        const targetIndex = siblingItem.findIndex(
+        const targetIndex = siblingTasks.findIndex(
           (item) => item.id === targetTaskId,
         );
         const newIndex = position === 'before' ? targetIndex : targetIndex + 1;
 
-        const prevItem = siblingItem[newIndex - 1];
-        const nextItem = siblingItem[newIndex];
-
-        if (!prevItem && !nextItem) {
-          newPosition = 1.0;
-        } else if (!prevItem) {
-          newPosition = nextItem.position - 1024;
-        } else if (!nextItem) {
-          newPosition = prevItem.position + 1024;
-        } else {
-          const prevItemPosition = prevItem.position;
-          const nextItemPosition = nextItem.position;
-          newPosition = (prevItemPosition + nextItemPosition) / 2;
-        }
+        const newPosition = this.calculatePosition(
+          siblingTasks[newIndex - 1],
+          siblingTasks[newIndex],
+        );
 
         if (Math.random() < 0.01) {
           await this.fixAllPositions();
@@ -278,10 +278,7 @@ export class TasksService {
 
         return tx.task.update({
           where: { id: taskId },
-          data: {
-            position: newPosition,
-            day,
-          },
+          data: { position: newPosition, day },
         });
       });
     } catch (error) {
