@@ -317,7 +317,6 @@ export class TasksService {
 
         // Обработка архивации/разархивации
         if (isArchive !== undefined) {
-          console.log('here');
           if (isArchive && !task.isArchived) {
             const archivedTask = await this.archiveTask(
               tx,
