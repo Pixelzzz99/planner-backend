@@ -33,6 +33,6 @@ export class MoveTaskDto {
   targetTaskId?: string;
 
   @IsOptional()
-  @IsString()
-  position: 'before' | 'after';
+  @IsNumber()
+  position: number;
 }

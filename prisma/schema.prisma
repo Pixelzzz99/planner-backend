@@ -97,8 +97,8 @@ model Task {
   duration      Int
   day           Int
   date          DateTime
-  categoryId    String     @db.Uuid
-  category      Category   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId    String?    @db.Uuid
+  category      Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   status        TaskStatus @default(TODO)
   isArchived    Boolean    @default(false)
   archiveReason String?
