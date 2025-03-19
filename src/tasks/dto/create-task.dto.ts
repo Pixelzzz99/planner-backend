@@ -6,7 +6,6 @@ import {
   IsNumber,
   IsUUID,
   IsOptional,
-  IsDateString,
 } from 'class-validator';
 
 export class CreateTaskDto {
@@ -30,7 +29,8 @@ export class CreateTaskDto {
   position?: number;
 
   @IsUUID()
-  categoryId: string;
+  @IsOptional()
+  categoryId?: string;
 
   @IsEnum(TaskStatus)
   status: TaskStatus;

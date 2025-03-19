@@ -22,13 +22,17 @@ export class MoveTaskDto {
 
   @IsOptional()
   @IsBoolean()
-  toArchive?: boolean;
+  isArchive?: boolean;
 
   @IsOptional()
   @IsString()
   archiveReason?: string;
 
   @IsOptional()
+  @IsString()
+  targetTaskId?: string;
+
+  @IsOptional()
   @IsNumber()
-  position?: number;
+  position: number;
 }
