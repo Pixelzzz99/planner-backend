@@ -105,6 +105,7 @@ model Task {
   archivedAt    DateTime?
   createdAt     DateTime   @default(now())
 
+
   @@index([position])
   @@index([day])
   @@index([weekPlanId, isArchived])
