@@ -76,12 +76,14 @@ model Focus {
 }
 
 model Category {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String   @unique
-  tasks     Task[]
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String   @unique
+  plannedTime Int      @default(0) // время в минутах, которое планирует потратить пользователь
+  actualTime  Int      @default(0) // фактическое время в минутах, сумма duration всех задач
+  tasks       Task[]
+  createdAt   DateTime @default(now())
 
   @@unique([userId, name])
 }
@@ -104,7 +106,6 @@ model Task {
   archiveReason String?
   archivedAt    DateTime?
   createdAt     DateTime   @default(now())
-
 
   @@index([position])
   @@index([day])

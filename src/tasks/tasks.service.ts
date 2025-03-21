@@ -15,12 +15,14 @@ import {
   InvalidDateException,
 } from '../common/exceptions/task.exceptions';
 import { MoveTaskDto } from './dto/move-task.dto';
+import { CategoriesService } from '../categories/categories.service';
 
 @Injectable()
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly websocket: WebsocketGateway,
+    private readonly categoriesService: CategoriesService,
   ) {}
 
   private async getLastPosition(
@@ -89,6 +91,11 @@ export class TasksService {
         });
 
         this.websocket.server.emit('taskCreated', task);
+
+        if (task.categoryId) {
+          await this.categoriesService.updateActualTime(task.categoryId);
+        }
+
         return task;
       });
     } catch (error) {
@@ -156,6 +163,10 @@ export class TasksService {
 
       const { categoryId, weekPlanId, ...updateData } = data;
 
+      const oldTask = await this.prisma.task.findUnique({
+        where: { id },
+      });
+
       const task = await this.prisma.task.update({
         where: { id },
         data: {
@@ -181,6 +192,14 @@ export class TasksService {
       });
 
       this.websocket.server.emit('taskUpdated', task);
+
+      if (oldTask.categoryId) {
+        await this.categoriesService.updateActualTime(oldTask.categoryId);
+      }
+      if (task.categoryId && task.categoryId !== oldTask.categoryId) {
+        await this.categoriesService.updateActualTime(task.categoryId);
+      }
+
       return task;
     } catch (error) {
       console.log(error);
@@ -212,6 +231,11 @@ export class TasksService {
       });
 
       this.websocket.server.emit('taskDeleted', task);
+
+      if (task.categoryId) {
+        await this.categoriesService.updateActualTime(task.categoryId);
+      }
+
       return task;
     } catch (error) {
       if (error instanceof HttpException) {
@@ -289,7 +313,6 @@ export class TasksService {
         day, // destination day
         weekPlanId,
       } = moveData;
-      console.log(moveData);
 
       return this.prisma.$transaction(async (tx) => {
         // Проверяем существование задачи
