@@ -1,39 +1,28 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
+import { CategoryRepository } from './category.repository';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly categoryRepository: CategoryRepository) {}
 
-  async createCategory(userId: string, name: string) {
-    return this.prismaService.category.create({
-      data: {
-        name,
-        user: {
-          connect: { id: userId },
-        },
-      },
-    });
+  createCategory(userId: string, createCategoryDto: CreateCategoryDto) {
+    return this.categoryRepository.create(userId, createCategoryDto);
   }
 
-  async getUserCategories(userId: string) {
-    return this.prismaService.category.findMany({
-      where: {
-        userId,
-      },
-    });
+  getUserCategories(userId: string) {
+    return this.categoryRepository.findManyByUserId(userId);
   }
 
-  async updateCategory(id: string, name: string) {
-    return this.prismaService.category.update({
-      where: { id },
-      data: { name },
-    });
+  updateCategory(id: string, updateCategoryDto: UpdateCategoryDto) {
+    return this.categoryRepository.update(id, updateCategoryDto);
   }
 
-  async deleteCategory(id: string) {
-    return this.prismaService.category.delete({
-      where: { id },
-    });
+  deleteCategory(id: string) {
+    return this.categoryRepository.delete(id);
+  }
+
+  updateActualTime(categoryId: string) {
+    return this.categoryRepository.calculateAndUpdateActualTime(categoryId);
   }
 }
