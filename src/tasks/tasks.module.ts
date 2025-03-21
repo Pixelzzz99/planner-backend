@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
+import { TasksService } from './tasks.service';
+import { CategoriesModule } from '../categories/categories.module';
 import { WebsocketModule } from 'src/websocket/websocket.module';
 
 @Module({
-  imports: [WebsocketModule], // Импортируем WebsocketModule
-  providers: [TasksService],
+  imports: [CategoriesModule, WebsocketModule],
   controllers: [TasksController],
+  providers: [TasksService],
 })
 export class TasksModule {}

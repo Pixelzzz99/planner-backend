@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Category" ADD COLUMN     "actualTime" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "plannedTime" INTEGER NOT NULL DEFAULT 0;
