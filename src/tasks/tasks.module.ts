@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
-import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
-import { CategoriesModule } from '../categories/categories.module';
+import { TasksController } from './tasks.controller';
+import { TaskRepository } from './repositories/task.repository';
 import { WebsocketModule } from 'src/websocket/websocket.module';
+import { CategoriesModule } from '../categories/categories.module';
 
 @Module({
-  imports: [CategoriesModule, WebsocketModule],
+  imports: [WebsocketModule, CategoriesModule],
   controllers: [TasksController],
-  providers: [TasksService],
+  providers: [TasksService, TaskRepository],
+  exports: [TasksService],
 })
 export class TasksModule {}
