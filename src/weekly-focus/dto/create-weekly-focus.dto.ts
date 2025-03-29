@@ -8,4 +8,8 @@ export class CreateWeeklyFocusDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  status?: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
 }
