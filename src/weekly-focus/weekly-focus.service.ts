@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWeeklyFocusDto } from './dto/create-weekly-focus.dto';
 import { UpdateWeeklyFocusDto } from './dto/update-weekly-focus.dto';
+import { FocusStatus } from '@prisma/client';
 
 @Injectable()
 export class WeeklyFocusService {
@@ -21,6 +22,7 @@ export class WeeklyFocusService {
       data: {
         title: dto.title,
         description: dto.description || '',
+        status: dto.status || FocusStatus.IN_PROGRESS,
         weekPlanId: weekPlanId,
       },
     });
@@ -67,6 +69,7 @@ export class WeeklyFocusService {
       data: {
         title: dto.title,
         description: dto.description,
+        status: dto.status,
       },
     });
   }

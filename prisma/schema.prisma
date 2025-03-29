@@ -68,11 +68,12 @@ model WeekPlan {
 }
 
 model Focus {
-  id          String   @id @default(uuid()) @db.Uuid
-  weekPlanId  String   @db.Uuid
-  weekPlan    WeekPlan @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  id          String      @id @default(uuid()) @db.Uuid
+  weekPlanId  String      @db.Uuid
+  weekPlan    WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
   title       String
   description String
+  status      FocusStatus @default(IN_PROGRESS)
 }
 
 model Category {
@@ -123,4 +124,10 @@ enum TaskStatus {
   TODO
   IN_PROGRESS
   COMPLETED
+}
+
+enum FocusStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
 }
