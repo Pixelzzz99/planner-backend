@@ -28,14 +28,16 @@ export class YearPlanService {
     }
   }
 
-  async create(userId: string) {
+  async create(userId: string, year?: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
+    const targetYear = year ?? new Date().getFullYear();
+
     const existing = await this.prisma.yearPlan.findMany({
-      where: { userId, year: new Date().getFullYear() },
+      where: { userId, year: targetYear },
     });
     if (existing.length > 0) {
       return existing[0];
@@ -43,7 +45,7 @@ export class YearPlanService {
 
     try {
       const yearPlan = await this.prisma.yearPlan.create({
-        data: { year: new Date().getFullYear(), userId },
+        data: { year: targetYear, userId },
       });
       await this.monthPlan.createMonthPlan(yearPlan.id);
       return yearPlan;

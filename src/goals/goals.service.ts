@@ -16,6 +16,7 @@ export class GoalsService {
       return await this.prisma.goal.create({
         data: {
           ...data,
+          year: data.year ?? new Date().getFullYear(),
           userId,
         },
       });
@@ -28,7 +29,7 @@ export class GoalsService {
     }
   }
 
-  async getUserGoals(userId: string) {
+  async getUserGoals(userId: string, year?: number) {
     try {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       if (!user) {
@@ -38,6 +39,7 @@ export class GoalsService {
       return await this.prisma.goal.findMany({
         where: {
           userId,
+          ...(year !== undefined ? { year } : {}),
         },
       });
     } catch (error) {

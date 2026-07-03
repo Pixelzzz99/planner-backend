@@ -32,6 +32,7 @@ model Goal {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   status    GoalStatus @default(TODO)
+  year      Int        @default(2025)
   createdAt DateTime   @default(now())
 }
 

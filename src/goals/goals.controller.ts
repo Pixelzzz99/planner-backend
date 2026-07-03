@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { GoalsService } from './goals.service';
@@ -23,8 +24,11 @@ export class GoalsController {
   }
 
   @Get(':userId')
-  getUserGoals(@Param('userId') userId: string) {
-    return this.goalsService.getUserGoals(userId);
+  getUserGoals(
+    @Param('userId') userId: string,
+    @Query('year') year?: string,
+  ) {
+    return this.goalsService.getUserGoals(userId, year ? parseInt(year) : undefined);
   }
 
   @Patch(':id')

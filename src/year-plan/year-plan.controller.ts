@@ -8,8 +8,8 @@ export class YearPlanController {
   constructor(private readonly yearPlanService: YearPlanService) {}
 
   @Post()
-  create(@Body() data: { userId: string }) {
-    return this.yearPlanService.create(data.userId);
+  create(@Body() data: { userId: string; year?: number }) {
+    return this.yearPlanService.create(data.userId, data.year);
   }
 
   @Get('/:userId')
