@@ -81,8 +81,12 @@ export class TaskRepository {
     return this.prisma.task.findMany({
       where: {
         isArchived: true,
-        category: {
-          userId: userId,
+        weekPlan: {
+          monthPlan: {
+            yearPlan: {
+              userId,
+            },
+          },
         },
       },
       include: {

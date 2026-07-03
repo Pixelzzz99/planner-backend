@@ -1,5 +1,13 @@
+import { IsDateString, IsOptional, IsUUID } from 'class-validator';
+
 export class CreateWeekPlanDto {
-  monthPlanId: string;
-  startDate: Date;
-  endDate: Date;
+  @IsUUID()
+  @IsOptional()
+  monthPlanId?: string;
+
+  @IsDateString()
+  startDate: string;
+
+  @IsDateString()
+  endDate: string;
 }

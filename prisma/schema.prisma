@@ -80,9 +80,9 @@ model Category {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @db.Uuid
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String   @unique
-  plannedTime Int      @default(0) // время в минутах, которое планирует потратить пользователь
-  actualTime  Int      @default(0) // фактическое время в минутах, сумма duration всех задач
+  name        String
+  plannedTime Int      @default(0)
+  actualTime  Int      @default(0)
   tasks       Task[]
   createdAt   DateTime @default(now())
 

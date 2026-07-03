@@ -25,22 +25,17 @@ export class TasksService {
     private readonly categoriesService: CategoriesService,
   ) {}
 
-  private async getLastPosition(
+  private async getLastPositionInTx(
+    tx: Prisma.TransactionClient,
     weekPlanId: string,
     day: number,
   ): Promise<number> {
-    const tasks = await this.taskRepository.transaction((tx) =>
-      tx.task.findMany({
-        where: {
-          weekPlanId,
-          day,
-          isArchived: false,
-        },
-        select: { position: true },
-        orderBy: { position: 'desc' },
-        take: 1,
-      }),
-    );
+    const tasks = await tx.task.findMany({
+      where: { weekPlanId, day, isArchived: false },
+      select: { position: true },
+      orderBy: { position: 'desc' },
+      take: 1,
+    });
     return tasks.length > 0 ? tasks[0].position + 1000 : 1000;
   }
 
@@ -175,16 +170,42 @@ export class TasksService {
     }
   }
 
-  private async getSiblingTasks(
-    tx: Prisma.TransactionClient,
-    day: number,
-    weekPlanId: string,
-  ) {
-    return tx.task.findMany({
-      where: { day, weekPlanId },
-      orderBy: { position: 'asc' },
-      select: { id: true, position: true, title: true },
-    });
+  private computeFractionalPosition(
+    siblings: { id: string; position: number }[],
+    afterTaskId: string | null | undefined,
+  ): number {
+    const STEP = 1000;
+    if (siblings.length === 0) return STEP;
+
+    if (afterTaskId === null) {
+      return siblings[0].position / 2;
+    }
+    if (afterTaskId === undefined) {
+      return siblings[siblings.length - 1].position + STEP;
+    }
+
+    const idx = siblings.findIndex((s) => s.id === afterTaskId);
+    if (idx < 0) return siblings[siblings.length - 1].position + STEP;
+
+    const prev = siblings[idx].position;
+    const next = idx + 1 < siblings.length ? siblings[idx + 1].position : null;
+    if (next === null) return prev + STEP;
+    return (prev + next) / 2;
+  }
+
+  private needsRebalance(
+    siblings: { id: string; position: number }[],
+    afterTaskId: string | null | undefined,
+  ): boolean {
+    if (
+      afterTaskId === undefined ||
+      afterTaskId === null ||
+      siblings.length === 0
+    )
+      return false;
+    const idx = siblings.findIndex((s) => s.id === afterTaskId);
+    if (idx < 0 || idx + 1 >= siblings.length) return false;
+    return siblings[idx + 1].position - siblings[idx].position < 0.001;
   }
 
   private async archiveTask(
@@ -213,7 +234,7 @@ export class TasksService {
     day: number,
     weekPlanId: string,
   ) {
-    const position = await this.getLastPosition(weekPlanId, day);
+    const position = await this.getLastPositionInTx(tx, weekPlanId, day);
 
     return tx.task.update({
       where: { id: taskId },
@@ -235,18 +256,14 @@ export class TasksService {
 
   async moveTask(taskId: string, moveData: MoveTaskDto) {
     try {
-      const {
-        targetTaskId,
-        position,
-        isArchive,
-        archiveReason,
-        day,
-        weekPlanId,
-      } = moveData;
+      const { afterTaskId, isArchive, archiveReason } = moveData;
 
       return this.taskRepository.transaction(async (tx) => {
         const task = await this.taskRepository.findTaskById(taskId);
         if (!task) throw new TaskNotFoundException(taskId);
+
+        const day = moveData.day ?? task.day;
+        const weekPlanId = moveData.weekPlanId ?? task.weekPlanId;
 
         if (isArchive !== undefined) {
           if (isArchive && !task.isArchived) {
@@ -267,50 +284,54 @@ export class TasksService {
             this.websocket.server.emit('taskUnarchived', unarchivedTask);
             return unarchivedTask;
           }
+          return task;
         }
 
-        if (!targetTaskId) {
-          const updatedTask = await this.taskRepository.updateTask(taskId, {
-            day,
-            position,
-          });
-          this.websocket.server.emit('taskMoved', updatedTask);
-          return updatedTask;
-        }
+        // All active siblings in destination (excluding the task being moved)
+        const siblings = await tx.task.findMany({
+          where: { weekPlanId, day, isArchived: false, id: { not: taskId } },
+          orderBy: { position: 'asc' },
+          select: { id: true, position: true },
+        });
 
-        const siblingTasks = await this.getSiblingTasks(tx, day, weekPlanId);
-        const tasksInDestination = siblingTasks.filter((t) => t.id !== taskId);
+        const rebalance = this.needsRebalance(siblings, afterTaskId);
 
-        const isConflict = tasksInDestination.some(
-          (t) => t.position === position,
-        );
+        if (rebalance) {
+          const insertAfterIdx =
+            afterTaskId === null
+              ? -1
+              : afterTaskId === undefined
+                ? siblings.length - 1
+                : Math.max(-1, siblings.findIndex((s) => s.id === afterTaskId));
 
-        let newPosition: number;
-        if (isConflict) {
-          const targetIndex = tasksInDestination.findIndex(
-            (t) => t.id === targetTaskId,
-          );
+          const rebalanced = [...siblings];
+          rebalanced.splice(insertAfterIdx + 1, 0, { id: taskId, position: 0 });
 
-          const updatedTasks = [...tasksInDestination];
-          updatedTasks.splice(targetIndex, 0, task);
-          newPosition =
-            (updatedTasks.findIndex((t) => t.id === taskId) + 1) * 1000;
-
-          Promise.all(
-            updatedTasks.map((t, i) =>
+          await Promise.all(
+            rebalanced.map((t, i) =>
               tx.task.update({
                 where: { id: t.id },
-                data: { position: (i + 1) * 1000 },
+                data: {
+                  position: (i + 1) * 1000,
+                  ...(t.id === taskId ? { day, weekPlanId } : {}),
+                },
               }),
             ),
           );
-        } else {
-          newPosition = position;
+
+          const finalTask = await tx.task.findUnique({
+            where: { id: taskId },
+            include: { category: { select: { name: true } } },
+          });
+          this.websocket.server.emit('taskMoved', finalTask);
+          return finalTask;
         }
+
+        const newPosition = this.computeFractionalPosition(siblings, afterTaskId);
 
         const updatedTask = await tx.task.update({
           where: { id: taskId },
-          data: { day, position: newPosition },
+          data: { day, weekPlanId, position: newPosition },
           include: { category: { select: { name: true } } },
         });
 
@@ -318,6 +339,7 @@ export class TasksService {
         return updatedTask;
       });
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         throw new HttpException(
           'Invalid task operation',

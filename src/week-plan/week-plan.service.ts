@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateWeekPlanDto } from './dto/create-week.dto';
 import { UpdateWeekPlanDto } from './dto/update-week.dto';
@@ -10,84 +15,65 @@ export class WeekPlanService {
 
   async createWeekPlan(monthPlanId: string, data: CreateWeekPlanDto) {
     try {
-      const formattedData = {
-        ...data,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
-      };
       return await this.prisma.weekPlan.create({
         data: {
-          ...formattedData,
+          startDate: new Date(data.startDate),
+          endDate: new Date(data.endDate),
           monthPlanId,
         },
       });
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-        throw new Error(error.meta?.target as string);
+        throw new BadRequestException(error.meta?.target as string);
       }
-      console.log('Unknown error', error);
-      throw new Error('Unknown error');
+      throw new InternalServerErrorException('Failed to create week plan');
     }
   }
 
   async getWeekPlans(weekPlanId: string) {
     try {
-      return await this.prisma.weekPlan.findUnique({
+      const week = await this.prisma.weekPlan.findUnique({
         where: { id: weekPlanId },
         include: {
           tasks: {
-            where: {
-              isArchived: false,
-            },
-            include: {
-              category: true,
-            },
-            orderBy: {
-              position: 'asc',
-            },
+            where: { isArchived: false },
+            include: { category: true },
+            orderBy: { position: 'asc' },
           },
           focus: true,
         },
       });
-    } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-        throw new Error(error.meta?.target as string);
+
+      if (!week) {
+        throw new NotFoundException(`Week plan ${weekPlanId} not found`);
       }
-      console.log('Unknown error', error);
-      throw new Error('Unknown error');
+
+      return week;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Failed to fetch week plan');
     }
   }
 
   async updateWeekPlan(id: string, data: UpdateWeekPlanDto) {
     try {
-      return await this.prisma.weekPlan.update({
-        where: { id },
-        data,
-      });
+      return await this.prisma.weekPlan.update({ where: { id }, data });
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-        throw new Error(error.meta?.target as string);
+        throw new NotFoundException(`Week plan ${id} not found`);
       }
-      console.log('Unknown error', error);
-      throw new Error('Unknown error');
+      throw new InternalServerErrorException('Failed to update week plan');
     }
   }
 
   async deleteWeekPlan(id: string) {
     try {
-      return await this.prisma.weekPlan.delete({
-        where: { id },
-      });
+      return await this.prisma.weekPlan.delete({ where: { id } });
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-        throw new Error(error.meta?.target as string);
+        throw new NotFoundException(`Week plan ${id} not found`);
       }
-      console.log('Unknown error', error);
-      throw new Error('Unknown error');
+      throw new InternalServerErrorException('Failed to delete week plan');
     }
   }
 }
