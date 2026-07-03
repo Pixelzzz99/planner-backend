@@ -28,11 +28,7 @@ export class MoveTaskDto {
   @IsString()
   archiveReason?: string;
 
+  // null = insert at top, undefined (not sent) = append to end, uuid = insert after that task
   @IsOptional()
-  @IsString()
-  targetTaskId?: string;
-
-  @IsOptional()
-  @IsNumber()
-  position: number;
+  afterTaskId?: string | null;
 }

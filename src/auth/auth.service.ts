@@ -56,13 +56,13 @@ export class AuthService {
 
   async logout(token: string) {
     this.invalidatedTokens.add(token);
-    // Очистка старых токенов (older than 24h)
-    setTimeout(
+    const timer = setTimeout(
       () => {
         this.invalidatedTokens.delete(token);
       },
       24 * 60 * 60 * 1000,
     );
+    timer.unref();
     return { message: 'Logged out successfully' };
   }
 

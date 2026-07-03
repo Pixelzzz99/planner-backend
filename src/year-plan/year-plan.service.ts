@@ -1,5 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import {
+  Injectable,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { MonthPlanService } from 'src/month-plan/month-plan.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -13,52 +16,39 @@ export class YearPlanService {
   async findOne(userId: string) {
     try {
       return await this.prisma.yearPlan.findMany({
-        where: { userId: userId },
+        where: { userId },
         include: {
           months: {
-            include: {
-              weekPlans: true,
-            },
+            include: { weekPlans: true },
           },
         },
       });
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-      } else {
-        console.log('Unknown error', error);
-      }
+      throw new InternalServerErrorException('Failed to fetch year plan');
     }
   }
 
   async create(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const existing = await this.prisma.yearPlan.findMany({
+      where: { userId, year: new Date().getFullYear() },
+    });
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
     try {
-      const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-
-      const existingYearPlan = await this.prisma.yearPlan.findMany({
-        where: { userId: userId, year: new Date().getFullYear() },
-      });
-      if (existingYearPlan.length > 0) {
-        return existingYearPlan[0];
-      }
       const yearPlan = await this.prisma.yearPlan.create({
-        data: {
-          year: new Date().getFullYear(),
-          userId: userId,
-        },
+        data: { year: new Date().getFullYear(), userId },
       });
-
       await this.monthPlan.createMonthPlan(yearPlan.id);
       return yearPlan;
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-      } else {
-        console.log('Unknown error', error);
-      }
+      throw new InternalServerErrorException('Failed to create year plan');
     }
   }
 
@@ -66,11 +56,7 @@ export class YearPlanService {
     try {
       return await this.prisma.yearPlan.delete({ where: { id } });
     } catch (error) {
-      if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-      } else {
-        console.log('Unknown error', error);
-      }
+      throw new NotFoundException(`Year plan ${id} not found`);
     }
   }
 }
