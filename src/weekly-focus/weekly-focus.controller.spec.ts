@@ -1,13 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WeeklyFocusController } from './weekly-focus.controller';
 import { WeeklyFocusService } from './weekly-focus.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { CreateWeeklyFocusDto } from './dto/create-weekly-focus.dto';
 import { UpdateWeeklyFocusDto } from './dto/update-weekly-focus.dto';
 
 describe('WeeklyFocusController', () => {
   let controller: WeeklyFocusController;
-  let service: WeeklyFocusService;
 
   const mockWeeklyFocusService = {
     create: jest.fn(),
@@ -31,12 +29,10 @@ describe('WeeklyFocusController', () => {
           provide: WeeklyFocusService,
           useValue: mockWeeklyFocusService,
         },
-        PrismaService,
       ],
     }).compile();
 
     controller = module.get<WeeklyFocusController>(WeeklyFocusController);
-    service = module.get<WeeklyFocusService>(WeeklyFocusService);
   });
 
   it('should be defined', () => {
@@ -52,11 +48,16 @@ describe('WeeklyFocusController', () => {
 
       mockWeeklyFocusService.create.mockResolvedValue(mockFocus);
 
-      const result = await controller.create('week-plan-uuid', createDto);
+      const result = await controller.create(
+        'week-plan-uuid',
+        createDto,
+        'user-1',
+      );
 
       expect(result).toEqual(mockFocus);
       expect(mockWeeklyFocusService.create).toHaveBeenCalledWith(
         'week-plan-uuid',
+        'user-1',
         createDto,
       );
     });
@@ -69,12 +70,12 @@ describe('WeeklyFocusController', () => {
         mockFocuses,
       );
 
-      const result = await controller.getFocuses('week-plan-uuid');
+      const result = await controller.getFocuses('week-plan-uuid', 'user-1');
 
       expect(result).toEqual(mockFocuses);
       expect(
         mockWeeklyFocusService.getFocusesByWeekPlanId,
-      ).toHaveBeenCalledWith('week-plan-uuid');
+      ).toHaveBeenCalledWith('week-plan-uuid', 'user-1');
     });
   });
 
@@ -82,10 +83,13 @@ describe('WeeklyFocusController', () => {
     it('should delete a focus', async () => {
       mockWeeklyFocusService.delete.mockResolvedValue(mockFocus);
 
-      const result = await controller.delete('focus-uuid');
+      const result = await controller.delete('focus-uuid', 'user-1');
 
       expect(result).toEqual(mockFocus);
-      expect(mockWeeklyFocusService.delete).toHaveBeenCalledWith('focus-uuid');
+      expect(mockWeeklyFocusService.delete).toHaveBeenCalledWith(
+        'focus-uuid',
+        'user-1',
+      );
     });
   });
 
@@ -101,7 +105,7 @@ describe('WeeklyFocusController', () => {
         ...updateDto,
       });
 
-      const result = await controller.update('focus-uuid', updateDto);
+      const result = await controller.update('focus-uuid', updateDto, 'user-1');
 
       expect(result).toEqual({
         ...mockFocus,
@@ -109,6 +113,7 @@ describe('WeeklyFocusController', () => {
       });
       expect(mockWeeklyFocusService.update).toHaveBeenCalledWith(
         'focus-uuid',
+        'user-1',
         updateDto,
       );
     });

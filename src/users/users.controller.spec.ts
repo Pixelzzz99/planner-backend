@@ -29,7 +29,7 @@ describe('UsersController', () => {
   });
 
   it('getUser returns user by id', async () => {
-    const result = await controller.getUser('user-1');
+    const result = await controller.getUser('user-1', 'user-1');
     expect(result).toEqual(mockUser);
   });
 });

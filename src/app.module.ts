@@ -8,9 +8,12 @@ import { AuthModule } from './auth/auth.module';
 import { YearPlanModule } from './year-plan/year-plan.module';
 import { MonthPlanModule } from './month-plan/month-plan.module';
 import { WeekPlanModule } from './week-plan/week-plan.module';
+import { OwnershipModule } from './common/ownership/ownership.module';
+import { HabitsModule } from './habits/habits.module';
 
 @Module({
   imports: [
+    OwnershipModule,
     PrismaModule,
     UsersModule,
     GoalsModule,
@@ -20,6 +23,7 @@ import { WeekPlanModule } from './week-plan/week-plan.module';
     YearPlanModule,
     MonthPlanModule,
     WeekPlanModule,
+    HabitsModule,
   ],
   controllers: [],
   providers: [],

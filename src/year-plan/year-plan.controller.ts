@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { YearPlanService } from './year-plan.service';
 import { AuthGuard } from '@nestjs/passport';
+import { GetUser } from 'src/auth/get-user.decorator';
 
 @Controller('year-plan')
 @UseGuards(AuthGuard('jwt'))
@@ -8,12 +9,15 @@ export class YearPlanController {
   constructor(private readonly yearPlanService: YearPlanService) {}
 
   @Post()
-  create(@Body() data: { userId: string; year?: number }) {
-    return this.yearPlanService.create(data.userId, data.year);
+  create(
+    @GetUser('userId') userId: string,
+    @Body() data: { year?: number },
+  ) {
+    return this.yearPlanService.create(userId, data?.year);
   }
 
-  @Get('/:userId')
-  getUserYearPlan(@Param('userId') userId: string) {
+  @Get()
+  getUserYearPlan(@GetUser('userId') userId: string) {
     return this.yearPlanService.findOne(userId);
   }
 }

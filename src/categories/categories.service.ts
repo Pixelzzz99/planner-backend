@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 import { CategoryRepository } from './category.repository';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly categoryRepository: CategoryRepository) {}
+  constructor(
+    private readonly categoryRepository: CategoryRepository,
+    private readonly ownership: OwnershipService,
+  ) {}
 
   createCategory(userId: string, createCategoryDto: CreateCategoryDto) {
     return this.categoryRepository.create(userId, createCategoryDto);
@@ -14,11 +18,17 @@ export class CategoriesService {
     return this.categoryRepository.findManyByUserId(userId);
   }
 
-  updateCategory(id: string, updateCategoryDto: UpdateCategoryDto) {
+  async updateCategory(
+    id: string,
+    userId: string,
+    updateCategoryDto: UpdateCategoryDto,
+  ) {
+    await this.ownership.assertCategoryOwner(id, userId);
     return this.categoryRepository.update(id, updateCategoryDto);
   }
 
-  deleteCategory(id: string) {
+  async deleteCategory(id: string, userId: string) {
+    await this.ownership.assertCategoryOwner(id, userId);
     return this.categoryRepository.delete(id);
   }
 

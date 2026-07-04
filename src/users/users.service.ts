@@ -31,7 +31,7 @@ export class UsersService {
 
   async getUserById(id: string) {
     try {
-      return await this.prisma.user.findUnique({
+      const user = await this.prisma.user.findUnique({
         select: {
           id: true,
           email: true,
@@ -39,6 +39,10 @@ export class UsersService {
         },
         where: { id },
       });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return user;
     } catch (error) {
       console.error('Error fetching user by id:', error);
       if (error instanceof PrismaClientKnownRequestError) {
@@ -64,7 +68,15 @@ export class UsersService {
 
   async getAllUsers() {
     try {
-      return await this.prisma.user.findMany();
+      return await this.prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
     } catch (error) {
       console.error('Error fetching all users:', error);
       throw error;

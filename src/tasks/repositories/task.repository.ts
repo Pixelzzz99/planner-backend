@@ -2,24 +2,41 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma, Task } from '@prisma/client';
 
+const taskInclude = {
+  category: {
+    select: { name: true },
+  },
+} as const;
+
 @Injectable()
 export class TaskRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async weekPlanExists(weekPlanId: string): Promise<boolean> {
+    const weekPlan = await this.prisma.weekPlan.findUnique({
+      where: { id: weekPlanId },
+      select: { id: true },
+    });
+    return !!weekPlan;
+  }
 
   async findTasksByWeekPlan(weekPlanId: string) {
     return this.prisma.task.findMany({
       where: { weekPlanId },
       include: {
-        category: {
-          select: { name: true },
-        },
+        ...taskInclude,
         weekPlan: true,
       },
     });
   }
 
-  async findLastPosition(weekPlanId: string, day: number): Promise<number> {
-    const tasks = await this.prisma.task.findMany({
+  async findLastPosition(
+    weekPlanId: string,
+    day: number,
+    tx?: Prisma.TransactionClient,
+  ): Promise<number> {
+    const client = tx ?? this.prisma;
+    const tasks = await client.task.findMany({
       where: {
         weekPlanId,
         day,
@@ -32,14 +49,11 @@ export class TaskRepository {
     return tasks.length > 0 ? tasks[0].position + 1000 : 1000;
   }
 
-  async createTask(data: Prisma.TaskCreateInput) {
-    return this.prisma.task.create({
+  async createTask(data: Prisma.TaskCreateInput, tx?: Prisma.TransactionClient) {
+    const client = tx ?? this.prisma;
+    return client.task.create({
       data,
-      include: {
-        category: {
-          select: { name: true },
-        },
-      },
+      include: taskInclude,
     });
   }
 
@@ -97,6 +111,20 @@ export class TaskRepository {
       orderBy: {
         archivedAt: 'desc',
       },
+    });
+  }
+
+  async findAllNonArchivedTasksForUser(userId: string) {
+    return this.prisma.task.findMany({
+      where: {
+        isArchived: false,
+        weekPlan: {
+          monthPlan: {
+            yearPlan: { userId },
+          },
+        },
+      },
+      orderBy: [{ weekPlanId: 'asc' }, { day: 'asc' }, { position: 'asc' }],
     });
   }
 

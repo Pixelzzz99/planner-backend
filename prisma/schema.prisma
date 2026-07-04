@@ -24,6 +24,7 @@ model User {
   goals      Goal[]
   yearPlans  YearPlan[]
   categories Category[]
+  habits     Habit[]
 }
 
 model Goal {
@@ -131,4 +132,28 @@ enum FocusStatus {
   IN_PROGRESS
   COMPLETED
   CANCELED
+}
+
+model Habit {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  color     String?
+  createdAt DateTime   @default(now())
+  logs      HabitLog[]
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  habitId   String   @db.Uuid
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  completed Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([habitId, date])
+  @@index([habitId, date])
 }

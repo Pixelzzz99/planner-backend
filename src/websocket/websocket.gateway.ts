@@ -1,4 +1,3 @@
-import { JwtModule } from '@nestjs/jwt';
 import {
   SubscribeMessage,
   WebSocketGateway,
@@ -9,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import * as jwt from 'jsonwebtoken';
+import { getJwtSecret } from 'src/common/config/jwt.config';
 
 @WebSocketGateway({ cors: true })
 export class WebsocketGateway
@@ -27,7 +27,7 @@ export class WebsocketGateway
         throw new Error('Unauthorized');
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+      const decoded = jwt.verify(token, getJwtSecret());
       client.data.userId = decoded.sub;
       console.log(`Client connected: ${client.id}`);
     } catch (error) {

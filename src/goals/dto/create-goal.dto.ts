@@ -6,10 +6,6 @@ export class CreateGoalDto {
   @IsNotEmpty()
   title: string;
 
-  @IsString()
-  @IsOptional()
-  description?: string;
-
   @IsEnum(GoalStatus)
   @IsOptional()
   status?: GoalStatus;

@@ -1,14 +1,7 @@
-import {
-  Get,
-  Injectable,
-  Req,
-  UnauthorizedException,
-  UseGuards,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
 export class AuthService {
@@ -44,6 +37,9 @@ export class AuthService {
 
   async generateToken(userId: string) {
     const user = await this.usersService.getUserById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
     const payload = {
       sub: userId,
       email: user.email,

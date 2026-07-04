@@ -8,12 +8,21 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateWeekPlanDto } from './dto/create-week.dto';
 import { UpdateWeekPlanDto } from './dto/update-week.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 @Injectable()
 export class WeekPlanService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ownership: OwnershipService,
+  ) {}
 
-  async createWeekPlan(monthPlanId: string, data: CreateWeekPlanDto) {
+  async createWeekPlan(
+    monthPlanId: string,
+    userId: string,
+    data: CreateWeekPlanDto,
+  ) {
+    await this.ownership.assertMonthPlanOwner(monthPlanId, userId);
     try {
       return await this.prisma.weekPlan.create({
         data: {
@@ -30,8 +39,10 @@ export class WeekPlanService {
     }
   }
 
-  async getWeekPlans(weekPlanId: string) {
+  async getWeekPlans(weekPlanId: string, userId: string) {
     try {
+      await this.ownership.assertWeekPlanOwner(weekPlanId, userId);
+
       const week = await this.prisma.weekPlan.findUnique({
         where: { id: weekPlanId },
         include: {
@@ -66,8 +77,9 @@ export class WeekPlanService {
     }
   }
 
-  async deleteWeekPlan(id: string) {
+  async deleteWeekPlan(id: string, userId: string) {
     try {
+      await this.ownership.assertWeekPlanOwner(id, userId);
       return await this.prisma.weekPlan.delete({ where: { id } });
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {

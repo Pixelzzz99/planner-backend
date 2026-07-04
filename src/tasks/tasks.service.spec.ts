@@ -5,12 +5,13 @@ import { WebsocketGateway } from 'src/websocket/websocket.gateway';
 import { CategoriesService } from 'src/categories/categories.service';
 import {
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-  TaskNotFoundException,
   WeekPlanNotFoundException,
 } from '../common/exceptions/task.exceptions';
 import { Priority, TaskStatus } from '@prisma/client';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 const mockTask = {
   id: 'task-1',
@@ -51,11 +52,18 @@ const mockTaskRepository = {
   transaction: jest.fn((fn) => fn({ task: { findMany: jest.fn(), update: jest.fn() } })),
 };
 
+const mockOwnership = {
+  assertWeekPlanOwner: jest.fn().mockResolvedValue(undefined),
+  assertTaskOwner: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('TasksService', () => {
   let service: TasksService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockOwnership.assertWeekPlanOwner.mockResolvedValue(undefined);
+    mockOwnership.assertTaskOwner.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -63,6 +71,7 @@ describe('TasksService', () => {
         { provide: TaskRepository, useValue: mockTaskRepository },
         { provide: WebsocketGateway, useValue: mockWebsocket },
         { provide: CategoriesService, useValue: mockCategoriesService },
+        { provide: OwnershipService, useValue: mockOwnership },
       ],
     }).compile();
 
@@ -73,7 +82,7 @@ describe('TasksService', () => {
     it('returns tasks for a week', async () => {
       mockTaskRepository.findTasksByWeekPlan.mockResolvedValue([mockTask]);
 
-      const result = await service.getTasksForWeek('week-1');
+      const result = await service.getTasksForWeek('week-1', 'user-1');
 
       expect(result).toEqual([mockTask]);
     });
@@ -83,19 +92,21 @@ describe('TasksService', () => {
         new Error('db error'),
       );
 
-      await expect(service.getTasksForWeek('week-1')).rejects.toThrow(
+      await expect(service.getTasksForWeek('week-1', 'user-1')).rejects.toThrow(
         InternalServerErrorException,
       );
     });
   });
 
   describe('updateTask', () => {
-    it('throws TaskNotFoundException when task does not exist', async () => {
-      mockTaskRepository.findTaskById.mockResolvedValue(null);
+    it('throws NotFoundException when task owner check fails', async () => {
+      mockOwnership.assertTaskOwner.mockRejectedValue(
+        new NotFoundException('Task not found'),
+      );
 
       await expect(
-        service.updateTask('nonexistent', { title: 'Updated' }),
-      ).rejects.toThrow(TaskNotFoundException);
+        service.updateTask('nonexistent', 'user-1', { title: 'Updated' }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('updates task and emits websocket event', async () => {
@@ -105,7 +116,9 @@ describe('TasksService', () => {
         title: 'Updated',
       });
 
-      const result = await service.updateTask('task-1', { title: 'Updated' });
+      const result = await service.updateTask('task-1', 'user-1', {
+        title: 'Updated',
+      });
 
       expect(result.title).toBe('Updated');
       expect(mockWebsocket.server.emit).toHaveBeenCalledWith(
@@ -116,11 +129,13 @@ describe('TasksService', () => {
   });
 
   describe('deleteTask', () => {
-    it('throws TaskNotFoundException when task does not exist', async () => {
-      mockTaskRepository.findTaskById.mockResolvedValue(null);
+    it('throws NotFoundException when task owner check fails', async () => {
+      mockOwnership.assertTaskOwner.mockRejectedValue(
+        new NotFoundException('Task not found'),
+      );
 
-      await expect(service.deleteTask('nonexistent')).rejects.toThrow(
-        TaskNotFoundException,
+      await expect(service.deleteTask('nonexistent', 'user-1')).rejects.toThrow(
+        NotFoundException,
       );
     });
 
@@ -128,7 +143,7 @@ describe('TasksService', () => {
       mockTaskRepository.findTaskById.mockResolvedValue(mockTask);
       mockTaskRepository.deleteTask.mockResolvedValue(mockTask);
 
-      const result = await service.deleteTask('task-1');
+      const result = await service.deleteTask('task-1', 'user-1');
 
       expect(result).toEqual(mockTask);
       expect(mockWebsocket.server.emit).toHaveBeenCalledWith(
@@ -142,7 +157,7 @@ describe('TasksService', () => {
       mockTaskRepository.findTaskById.mockResolvedValue(taskWithCategory);
       mockTaskRepository.deleteTask.mockResolvedValue(taskWithCategory);
 
-      await service.deleteTask('task-1');
+      await service.deleteTask('task-1', 'user-1');
 
       expect(mockCategoriesService.updateActualTime).toHaveBeenCalledWith(
         'cat-1',

@@ -36,11 +36,15 @@ describe('GoalsController', () => {
 
   it('create delegates to service', async () => {
     const result = await controller.create('user-1', { title: 'Learn NestJS' });
+    expect(mockGoalsService.createGoal).toHaveBeenCalledWith('user-1', {
+      title: 'Learn NestJS',
+    });
     expect(result).toEqual(mockGoal);
   });
 
   it('getUserGoals returns goals list', async () => {
     const result = await controller.getUserGoals('user-1');
+    expect(mockGoalsService.getUserGoals).toHaveBeenCalledWith('user-1');
     expect(result).toEqual([mockGoal]);
   });
 });

@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
@@ -14,10 +17,9 @@ export class MonthPlanService {
       });
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-      } else {
-        console.log('Unknown error', error);
+        throw new InternalServerErrorException('Failed to fetch month plans');
       }
+      throw error;
     }
   }
 
@@ -32,10 +34,9 @@ export class MonthPlanService {
       });
     } catch (error) {
       if (error instanceof PrismaClientKnownRequestError) {
-        console.log(error);
-      } else {
-        console.log('Unknown error', error);
+        throw new InternalServerErrorException('Failed to create month plans');
       }
+      throw error;
     }
   }
 }

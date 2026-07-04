@@ -49,12 +49,12 @@ describe('TasksController', () => {
   });
 
   it('getTasksForWeek delegates to service', async () => {
-    const result = await controller.getTasksForWeek('week-1');
+    const result = await controller.getTasksForWeek('week-1', 'user-1');
     expect(result).toEqual([mockTask]);
   });
 
   it('deleteTask delegates to service', async () => {
-    const result = await controller.deleteTask('task-1');
+    const result = await controller.deleteTask('task-1', 'user-1');
     expect(result).toEqual(mockTask);
   });
 });

@@ -3,6 +3,7 @@ import { GoalsService } from './goals.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
 import { GoalStatus } from '@prisma/client';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 const mockUser = { id: 'user-1', email: 'a@b.com', name: 'A' };
 const mockGoal = {
@@ -26,6 +27,10 @@ const mockPrisma = {
   },
 };
 
+const mockOwnership = {
+  assertGoalOwner: jest.fn(),
+};
+
 describe('GoalsService', () => {
   let service: GoalsService;
 
@@ -36,6 +41,7 @@ describe('GoalsService', () => {
       providers: [
         GoalsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: OwnershipService, useValue: mockOwnership },
       ],
     }).compile();
 
@@ -85,21 +91,23 @@ describe('GoalsService', () => {
 
   describe('updateGoal', () => {
     it('throws if goal not found', async () => {
-      mockPrisma.goal.findUnique.mockResolvedValue(null);
+      mockOwnership.assertGoalOwner.mockRejectedValue(
+        new NotFoundException('Goal not found'),
+      );
 
       await expect(
-        service.updateGoal('goal-1', { status: GoalStatus.COMPLETED }),
+        service.updateGoal('goal-1', 'user-1', { status: GoalStatus.COMPLETED }),
       ).rejects.toThrow(NotFoundException);
     });
 
     it('updates and returns goal', async () => {
-      mockPrisma.goal.findUnique.mockResolvedValue(mockGoal);
+      mockOwnership.assertGoalOwner.mockResolvedValue(undefined);
       mockPrisma.goal.update.mockResolvedValue({
         ...mockGoal,
         status: GoalStatus.COMPLETED,
       });
 
-      const result = await service.updateGoal('goal-1', {
+      const result = await service.updateGoal('goal-1', 'user-1', {
         status: GoalStatus.COMPLETED,
       });
 
@@ -109,9 +117,10 @@ describe('GoalsService', () => {
 
   describe('deleteGoal', () => {
     it('deletes and returns goal', async () => {
+      mockOwnership.assertGoalOwner.mockResolvedValue(undefined);
       mockPrisma.goal.delete.mockResolvedValue(mockGoal);
 
-      const result = await service.deleteGoal('goal-1');
+      const result = await service.deleteGoal('goal-1', 'user-1');
 
       expect(result).toEqual(mockGoal);
       expect(mockPrisma.goal.delete).toHaveBeenCalledWith({

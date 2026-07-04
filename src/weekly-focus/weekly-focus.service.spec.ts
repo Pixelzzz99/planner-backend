@@ -2,10 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { WeeklyFocusService } from './weekly-focus.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 describe('WeeklyFocusService', () => {
   let service: WeeklyFocusService;
-  let prismaService: PrismaService;
 
   const mockPrismaService = {
     weekPlan: {
@@ -13,25 +13,32 @@ describe('WeeklyFocusService', () => {
     },
     focus: {
       create: jest.fn(),
+      findMany: jest.fn(),
       findUnique: jest.fn(),
       delete: jest.fn(),
       update: jest.fn(),
     },
   };
 
+  const mockOwnership = {
+    assertWeekPlanOwner: jest.fn().mockResolvedValue(undefined),
+    assertFocusOwner: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
+    jest.clearAllMocks();
+    mockOwnership.assertWeekPlanOwner.mockResolvedValue(undefined);
+    mockOwnership.assertFocusOwner.mockResolvedValue(undefined);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WeeklyFocusService,
-        {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: OwnershipService, useValue: mockOwnership },
       ],
     }).compile();
 
     service = module.get<WeeklyFocusService>(WeeklyFocusService);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   it('should be defined', () => {
@@ -58,19 +65,24 @@ describe('WeeklyFocusService', () => {
         ...createDto,
       };
 
-      mockPrismaService.weekPlan.findUnique.mockResolvedValue(mockWeekPlan);
       mockPrismaService.focus.create.mockResolvedValue(expectedFocus);
 
-      const result = await service.create(mockWeekPlan.id, createDto);
+      const result = await service.create(
+        mockWeekPlan.id,
+        'user-1',
+        createDto,
+      );
 
       expect(result).toEqual(expectedFocus);
     });
 
     it('should throw NotFoundException if week plan not found', async () => {
-      mockPrismaService.weekPlan.findUnique.mockResolvedValue(null);
+      mockOwnership.assertWeekPlanOwner.mockRejectedValue(
+        new NotFoundException('Week plan not found'),
+      );
 
       await expect(
-        service.create('non-existent-id', {
+        service.create('non-existent-id', 'user-1', {
           title: 'Test',
           description: 'Test',
         }),
@@ -80,24 +92,22 @@ describe('WeeklyFocusService', () => {
 
   describe('getFocusesByWeekPlanId', () => {
     it('should return focuses for week plan', async () => {
-      const mockWeekPlan = {
-        id: 'week-plan-uuid',
-        focus: [
-          {
-            id: 'focus-uuid',
-            title: 'Test Focus',
-            description: 'Test Description',
-          },
-        ],
-      };
+      const mockFocuses = [
+        {
+          id: 'focus-uuid',
+          title: 'Test Focus',
+          description: 'Test Description',
+        },
+      ];
 
-      mockPrismaService.weekPlan.findUnique.mockResolvedValue(mockWeekPlan);
+      mockPrismaService.focus.findMany.mockResolvedValue(mockFocuses);
 
-      const result = await service.getFocusesByWeekPlanId(mockWeekPlan.id);
+      const result = await service.getFocusesByWeekPlanId(
+        'week-plan-uuid',
+        'user-1',
+      );
 
-      expect(result).toEqual(mockWeekPlan.focus);
+      expect(result).toEqual(mockFocuses);
     });
   });
-
-  // Добавьте больше тестов для других методов сервиса
 });

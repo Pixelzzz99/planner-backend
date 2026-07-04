@@ -16,6 +16,7 @@ import {
 import { MoveTaskDto } from './dto/move-task.dto';
 import { CategoriesService } from '../categories/categories.service';
 import { TaskRepository } from './repositories/task.repository';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 @Injectable()
 export class TasksService {
@@ -23,6 +24,7 @@ export class TasksService {
     private readonly taskRepository: TaskRepository,
     private readonly websocket: WebsocketGateway,
     private readonly categoriesService: CategoriesService,
+    private readonly ownership: OwnershipService,
   ) {}
 
   private async getLastPositionInTx(
@@ -39,8 +41,10 @@ export class TasksService {
     return tasks.length > 0 ? tasks[0].position + 1000 : 1000;
   }
 
-  async createTask(weekPlanId: string, data: CreateTaskDto) {
+  async createTask(weekPlanId: string, userId: string, data: CreateTaskDto) {
     try {
+      await this.ownership.assertWeekPlanOwner(weekPlanId, userId);
+
       return await this.taskRepository.transaction(async (tx) => {
         const [weekPlan, category] = await Promise.all([
           tx.weekPlan.findUnique({ where: { id: weekPlanId } }),
@@ -52,6 +56,9 @@ export class TasksService {
         if (!weekPlan) throw new WeekPlanNotFoundException(weekPlanId);
         if (data.categoryId && !category)
           throw new CategoryNotFoundException(data.categoryId);
+        if (data.categoryId && category?.userId !== userId) {
+          throw new CategoryNotFoundException(data.categoryId);
+        }
 
         const parsedDate = new Date(data.date);
         if (isNaN(parsedDate.getTime())) throw new InvalidDateException();
@@ -59,6 +66,7 @@ export class TasksService {
         const position = await this.taskRepository.findLastPosition(
           weekPlanId,
           data.day,
+          tx,
         );
         const { categoryId, ...restData } = data;
         const createData = {
@@ -69,7 +77,7 @@ export class TasksService {
           category: categoryId ? { connect: { id: categoryId } } : undefined,
         };
 
-        const task = await this.taskRepository.createTask(createData);
+        const task = await this.taskRepository.createTask(createData, tx);
         this.websocket.server.emit('taskCreated', task);
 
         if (task.categoryId) {
@@ -97,23 +105,19 @@ export class TasksService {
     }
   }
 
-  async getTasksForWeek(weekPlanId: string) {
+  async getTasksForWeek(weekPlanId: string, userId: string) {
     try {
-      const tasks = await this.taskRepository.findTasksByWeekPlan(weekPlanId);
-      if (!tasks) {
-        throw new WeekPlanNotFoundException(weekPlanId);
-      }
-      return tasks;
+      await this.ownership.assertWeekPlanOwner(weekPlanId, userId);
+      return await this.taskRepository.findTasksByWeekPlan(weekPlanId);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Failed to fetch tasks');
     }
   }
 
-  async updateTask(id: string, data: UpdateTaskDto) {
+  async updateTask(id: string, userId: string, data: UpdateTaskDto) {
     try {
-      const existingTask = await this.taskRepository.findTaskById(id);
-      if (!existingTask) throw new TaskNotFoundException(id);
+      await this.ownership.assertTaskOwner(id, userId);
 
       if (data.date) {
         const parsedDate = new Date(data.date);
@@ -151,10 +155,9 @@ export class TasksService {
     }
   }
 
-  async deleteTask(id: string) {
+  async deleteTask(id: string, userId: string) {
     try {
-      const existingTask = await this.taskRepository.findTaskById(id);
-      if (!existingTask) throw new TaskNotFoundException(id);
+      await this.ownership.assertTaskOwner(id, userId);
 
       const task = await this.taskRepository.deleteTask(id);
       this.websocket.server.emit('taskDeleted', task);
@@ -254,8 +257,12 @@ export class TasksService {
     });
   }
 
-  async moveTask(taskId: string, moveData: MoveTaskDto) {
+  async moveTask(taskId: string, userId: string, moveData: MoveTaskDto) {
     try {
+      await this.ownership.assertTaskOwner(taskId, userId);
+      if (moveData.weekPlanId) {
+        await this.ownership.assertWeekPlanOwner(moveData.weekPlanId, userId);
+      }
       const { afterTaskId, isArchive, archiveReason } = moveData;
 
       return this.taskRepository.transaction(async (tx) => {
@@ -360,9 +367,11 @@ export class TasksService {
     }
   }
 
-  async fixAllPositions() {
+  async fixAllPositions(userId: string) {
     try {
-      const tasks = await this.taskRepository.findAllNonArchivedTasks();
+      const tasks = await this.taskRepository.findAllNonArchivedTasksForUser(
+        userId,
+      );
       const groupedTasks = tasks.reduce(
         (acc, task) => {
           const key = `${task.weekPlanId}-${task.day}`;

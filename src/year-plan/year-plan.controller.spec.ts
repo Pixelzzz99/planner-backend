@@ -28,6 +28,7 @@ describe('YearPlanController', () => {
 
   it('getUserYearPlan returns year plans', async () => {
     const result = await controller.getUserYearPlan('user-1');
+    expect(mockYearPlanService.findOne).toHaveBeenCalledWith('user-1');
     expect(result).toEqual([mockYearPlan]);
   });
 });

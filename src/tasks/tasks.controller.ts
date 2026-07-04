@@ -25,36 +25,51 @@ export class TasksController {
     return this.taskService.getArchivedTasks(userId);
   }
 
+  @Post('fix-positions')
+  async fixPositions(@GetUser('userId') userId: string) {
+    return this.taskService.fixAllPositions(userId);
+  }
+
   @Get(':weekPlanId')
-  getTasksForWeek(@Param('weekPlanId') weekPlanId: string) {
-    return this.taskService.getTasksForWeek(weekPlanId);
+  getTasksForWeek(
+    @Param('weekPlanId') weekPlanId: string,
+    @GetUser('userId') userId: string,
+  ) {
+    return this.taskService.getTasksForWeek(weekPlanId, userId);
   }
 
   @Post()
-  createTask(@Query('weekId') weekPlanId: string, @Body() data: CreateTaskDto) {
-    return this.taskService.createTask(weekPlanId, data);
+  createTask(
+    @Query('weekId') weekPlanId: string,
+    @Body() data: CreateTaskDto,
+    @GetUser('userId') userId: string,
+  ) {
+    return this.taskService.createTask(weekPlanId, userId, data);
   }
 
   @Patch(':id')
-  updateTask(@Param('id') id: string, @Body() data: UpdateTaskDto) {
-    return this.taskService.updateTask(id, data);
+  updateTask(
+    @Param('id') id: string,
+    @Body() data: UpdateTaskDto,
+    @GetUser('userId') userId: string,
+  ) {
+    return this.taskService.updateTask(id, userId, data);
   }
 
   @Patch(':id/move')
-  moveTask(@Param('id') id: string, @Body() moveData: MoveTaskDto) {
-    return this.taskService.moveTask(id, {
+  moveTask(
+    @Param('id') id: string,
+    @Body() moveData: MoveTaskDto,
+    @GetUser('userId') userId: string,
+  ) {
+    return this.taskService.moveTask(id, userId, {
       ...moveData,
       date: moveData.date ? moveData.date : undefined,
     });
   }
 
-  @Post('fix-positions')
-  async fixPositions() {
-    return this.taskService.fixAllPositions();
-  }
-
   @Delete(':id')
-  deleteTask(@Param('id') id: string) {
-    return this.taskService.deleteTask(id);
+  deleteTask(@Param('id') id: string, @GetUser('userId') userId: string) {
+    return this.taskService.deleteTask(id, userId);
   }
 }

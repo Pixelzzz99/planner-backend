@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CategoriesService } from './categories.service';
 import { CategoryRepository } from './category.repository';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 const mockCategory = {
   id: 'cat-1',
@@ -20,16 +21,22 @@ const mockCategoryRepository = {
   calculateAndUpdateActualTime: jest.fn(),
 };
 
+const mockOwnership = {
+  assertCategoryOwner: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('CategoriesService', () => {
   let service: CategoriesService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockOwnership.assertCategoryOwner.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CategoriesService,
         { provide: CategoryRepository, useValue: mockCategoryRepository },
+        { provide: OwnershipService, useValue: mockOwnership },
       ],
     }).compile();
 
@@ -70,7 +77,9 @@ describe('CategoriesService', () => {
         plannedTime: 200,
       });
 
-      const result = await service.updateCategory('cat-1', { plannedTime: 200 });
+      const result = await service.updateCategory('cat-1', 'user-1', {
+        plannedTime: 200,
+      });
 
       expect(result.plannedTime).toBe(200);
     });
@@ -80,7 +89,7 @@ describe('CategoriesService', () => {
     it('delegates delete to repository', async () => {
       mockCategoryRepository.delete.mockResolvedValue(mockCategory);
 
-      const result = await service.deleteCategory('cat-1');
+      const result = await service.deleteCategory('cat-1', 'user-1');
 
       expect(result).toEqual(mockCategory);
     });

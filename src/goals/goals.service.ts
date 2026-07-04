@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateGoalDto, UpdateGoalDto } from './dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { OwnershipService } from 'src/common/ownership/ownership.service';
 
 @Injectable()
 export class GoalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ownership: OwnershipService,
+  ) {}
 
   async createGoal(userId: string, data: CreateGoalDto) {
     try {
@@ -52,12 +56,9 @@ export class GoalsService {
     }
   }
 
-  async updateGoal(id: string, data: UpdateGoalDto) {
+  async updateGoal(id: string, userId: string, data: UpdateGoalDto) {
     try {
-      const goal = await this.prisma.goal.findUnique({ where: { id } });
-      if (!goal) {
-        throw new NotFoundException('Goal not found');
-      }
+      await this.ownership.assertGoalOwner(id, userId);
       return await this.prisma.goal.update({
         where: { id },
         data,
@@ -72,8 +73,9 @@ export class GoalsService {
     }
   }
 
-  async deleteGoal(id: string) {
+  async deleteGoal(id: string, userId: string) {
     try {
+      await this.ownership.assertGoalOwner(id, userId);
       return await this.prisma.goal.delete({
         where: { id },
       });
