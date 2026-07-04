@@ -44,7 +44,10 @@ describe('GoalsController', () => {
 
   it('getUserGoals returns goals list', async () => {
     const result = await controller.getUserGoals('user-1');
-    expect(mockGoalsService.getUserGoals).toHaveBeenCalledWith('user-1');
+    expect(mockGoalsService.getUserGoals).toHaveBeenCalledWith(
+      'user-1',
+      undefined,
+    );
     expect(result).toEqual([mockGoal]);
   });
 });

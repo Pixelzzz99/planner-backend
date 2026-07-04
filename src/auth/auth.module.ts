@@ -10,9 +10,11 @@ import { getJwtSecret } from 'src/common/config/jwt.config';
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({
-      secret: getJwtSecret(),
-      signOptions: { expiresIn: '1d' },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: getJwtSecret(),
+        signOptions: { expiresIn: '1d' },
+      }),
     }),
     UsersModule,
   ],

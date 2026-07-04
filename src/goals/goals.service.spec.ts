@@ -65,7 +65,11 @@ describe('GoalsService', () => {
 
       expect(result).toEqual(mockGoal);
       expect(mockPrisma.goal.create).toHaveBeenCalledWith({
-        data: { title: 'Learn NestJS', userId: 'user-1' },
+        data: {
+          title: 'Learn NestJS',
+          userId: 'user-1',
+          year: expect.any(Number),
+        },
       });
     });
   });
