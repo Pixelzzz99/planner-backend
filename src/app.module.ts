@@ -10,6 +10,7 @@ import { MonthPlanModule } from './month-plan/month-plan.module';
 import { WeekPlanModule } from './week-plan/week-plan.module';
 import { OwnershipModule } from './common/ownership/ownership.module';
 import { HabitsModule } from './habits/habits.module';
+import { RecurringTasksModule } from './recurring-tasks/recurring-tasks.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { HabitsModule } from './habits/habits.module';
     MonthPlanModule,
     WeekPlanModule,
     HabitsModule,
+    RecurringTasksModule,
   ],
   controllers: [],
   providers: [],

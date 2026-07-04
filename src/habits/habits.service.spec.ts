@@ -102,6 +102,22 @@ describe('HabitsService', () => {
     expect(result.completed).toBe(true);
   });
 
+  it('returns heatmap for year', async () => {
+    mockPrisma.habit.findMany.mockResolvedValue([mockHabit]);
+    mockPrisma.habitLog.findMany.mockResolvedValue([
+      {
+        habitId: 'habit-1',
+        date: new Date('2026-03-15'),
+      },
+    ]);
+
+    const result = await service.getHeatmap('user-1', 2026);
+
+    expect(result.year).toBe(2026);
+    expect(result.habits[0].totalCompleted).toBe(1);
+    expect(result.habits[0].completedDates).toContain('2026-03-15');
+  });
+
   it('throws when habit not found on update', async () => {
     mockPrisma.habit.findUnique.mockResolvedValue(null);
 

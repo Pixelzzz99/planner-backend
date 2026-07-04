@@ -121,6 +121,50 @@ export class HabitsService {
     return this.prisma.habit.delete({ where: { id } });
   }
 
+  async getHeatmap(userId: string, year: number) {
+    const start = toDateOnly(`${year}-01-01`);
+    const end = toDateOnly(`${year}-12-31`);
+
+    const habits = await this.prisma.habit.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, title: true, color: true },
+    });
+
+    if (habits.length === 0) {
+      return { year, habits: [] };
+    }
+
+    const logs = await this.prisma.habitLog.findMany({
+      where: {
+        habitId: { in: habits.map((h) => h.id) },
+        completed: true,
+        date: { gte: start, lte: end },
+      },
+      select: { habitId: true, date: true },
+    });
+
+    const logsByHabit = new Map<string, string[]>();
+    for (const log of logs) {
+      const dateKey = toDateOnly(log.date).toISOString().slice(0, 10);
+      const existing = logsByHabit.get(log.habitId) ?? [];
+      existing.push(dateKey);
+      logsByHabit.set(log.habitId, existing);
+    }
+
+    return {
+      year,
+      habits: habits.map((habit) => {
+        const completedDates = logsByHabit.get(habit.id) ?? [];
+        return {
+          ...habit,
+          completedDates,
+          totalCompleted: completedDates.length,
+        };
+      }),
+    };
+  }
+
   async toggleLog(id: string, userId: string, date: string) {
     await this.assertHabitOwner(id, userId);
     const dateOnly = toDateOnly(date);

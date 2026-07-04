@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { TaskRepository } from './repositories/task.repository';
-import { WebsocketGateway } from 'src/websocket/websocket.gateway';
 import { CategoriesService } from 'src/categories/categories.service';
 import {
   InternalServerErrorException,
@@ -30,10 +29,6 @@ const mockTask = {
   archivedAt: null,
   position: 1000,
   createdAt: new Date(),
-};
-
-const mockWebsocket = {
-  server: { emit: jest.fn() },
 };
 
 const mockCategoriesService = {
@@ -69,7 +64,6 @@ describe('TasksService', () => {
       providers: [
         TasksService,
         { provide: TaskRepository, useValue: mockTaskRepository },
-        { provide: WebsocketGateway, useValue: mockWebsocket },
         { provide: CategoriesService, useValue: mockCategoriesService },
         { provide: OwnershipService, useValue: mockOwnership },
       ],
@@ -109,7 +103,7 @@ describe('TasksService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('updates task and emits websocket event', async () => {
+    it('updates task', async () => {
       mockTaskRepository.findTaskById.mockResolvedValue(mockTask);
       mockTaskRepository.updateTask.mockResolvedValue({
         ...mockTask,
@@ -121,10 +115,6 @@ describe('TasksService', () => {
       });
 
       expect(result.title).toBe('Updated');
-      expect(mockWebsocket.server.emit).toHaveBeenCalledWith(
-        'taskUpdated',
-        expect.any(Object),
-      );
     });
   });
 
@@ -139,17 +129,13 @@ describe('TasksService', () => {
       );
     });
 
-    it('deletes task and emits websocket event', async () => {
+    it('deletes task', async () => {
       mockTaskRepository.findTaskById.mockResolvedValue(mockTask);
       mockTaskRepository.deleteTask.mockResolvedValue(mockTask);
 
       const result = await service.deleteTask('task-1', 'user-1');
 
       expect(result).toEqual(mockTask);
-      expect(mockWebsocket.server.emit).toHaveBeenCalledWith(
-        'taskDeleted',
-        mockTask,
-      );
     });
 
     it('updates category actual time on delete', async () => {

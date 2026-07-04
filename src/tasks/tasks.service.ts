@@ -5,7 +5,6 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateTaskDto, UpdateTaskDto } from './dto';
-import { WebsocketGateway } from 'src/websocket/websocket.gateway';
 import { Prisma, Task } from '@prisma/client';
 import {
   TaskNotFoundException,
@@ -22,7 +21,6 @@ import { OwnershipService } from 'src/common/ownership/ownership.service';
 export class TasksService {
   constructor(
     private readonly taskRepository: TaskRepository,
-    private readonly websocket: WebsocketGateway,
     private readonly categoriesService: CategoriesService,
     private readonly ownership: OwnershipService,
   ) {}
@@ -78,7 +76,6 @@ export class TasksService {
         };
 
         const task = await this.taskRepository.createTask(createData, tx);
-        this.websocket.server.emit('taskCreated', task);
 
         if (task.categoryId) {
           await this.categoriesService.updateActualTime(task.categoryId);
@@ -139,7 +136,6 @@ export class TasksService {
       };
 
       const task = await this.taskRepository.updateTask(id, updateTaskData);
-      this.websocket.server.emit('taskUpdated', task);
 
       if (oldTask.categoryId) {
         await this.categoriesService.updateActualTime(oldTask.categoryId);
@@ -160,7 +156,6 @@ export class TasksService {
       await this.ownership.assertTaskOwner(id, userId);
 
       const task = await this.taskRepository.deleteTask(id);
-      this.websocket.server.emit('taskDeleted', task);
 
       if (task.categoryId) {
         await this.categoriesService.updateActualTime(task.categoryId);
@@ -279,7 +274,6 @@ export class TasksService {
               taskId,
               archiveReason,
             );
-            this.websocket.server.emit('taskArchived', archivedTask);
             return archivedTask;
           } else if (!isArchive && task.isArchived) {
             const unarchivedTask = await this.unarchiveTask(
@@ -288,7 +282,6 @@ export class TasksService {
               day,
               weekPlanId,
             );
-            this.websocket.server.emit('taskUnarchived', unarchivedTask);
             return unarchivedTask;
           }
           return task;
@@ -330,7 +323,6 @@ export class TasksService {
             where: { id: taskId },
             include: { category: { select: { name: true } } },
           });
-          this.websocket.server.emit('taskMoved', finalTask);
           return finalTask;
         }
 
@@ -342,7 +334,6 @@ export class TasksService {
           include: { category: { select: { name: true } } },
         });
 
-        this.websocket.server.emit('taskMoved', updatedTask);
         return updatedTask;
       });
     } catch (error) {

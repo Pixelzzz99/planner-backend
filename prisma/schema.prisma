@@ -25,6 +25,7 @@ model User {
   yearPlans  YearPlan[]
   categories Category[]
   habits     Habit[]
+  recurringTasks RecurringTask[]
 }
 
 model Goal {
@@ -33,7 +34,7 @@ model Goal {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   status    GoalStatus @default(TODO)
-  year      Int        @default(2025)
+  year      Int        @default(dbgenerated("EXTRACT(YEAR FROM CURRENT_DATE)::int"))
   createdAt DateTime   @default(now())
 }
 
@@ -88,6 +89,8 @@ model Category {
   tasks       Task[]
   createdAt   DateTime @default(now())
 
+  recurringTasks RecurringTask[]
+
   @@unique([userId, name])
 }
 
@@ -109,11 +112,32 @@ model Task {
   archiveReason String?
   archivedAt    DateTime?
   createdAt     DateTime   @default(now())
+  recurringTaskId String?    @db.Uuid
+  recurringTask   RecurringTask? @relation(fields: [recurringTaskId], references: [id], onDelete: SetNull)
 
   @@index([position])
   @@index([day])
   @@index([weekPlanId, isArchived])
   @@index([isArchived, day])
+  @@index([weekPlanId, recurringTaskId])
+}
+
+model RecurringTask {
+  id          String     @id @default(uuid()) @db.Uuid
+  userId      String     @db.Uuid
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  priority    Priority   @default(MEDIUM)
+  duration    Int        @default(0)
+  day         Int
+  categoryId  String?    @db.Uuid
+  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  instances   Task[]
+
+  @@index([userId, active])
 }
 
 enum Priority {

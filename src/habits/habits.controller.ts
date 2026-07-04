@@ -17,11 +17,20 @@ import { CreateHabitDto } from './dto/create-habit.dto';
 import { UpdateHabitDto } from './dto/update-habit.dto';
 import { ToggleHabitLogDto } from './dto/toggle-habit-log.dto';
 import { GetHabitsQueryDto } from './dto/get-habits-query.dto';
+import { GetHabitsHeatmapQueryDto } from './dto/get-habits-heatmap-query.dto';
 
 @Controller('habits')
 @UseGuards(AuthGuard('jwt'))
 export class HabitsController {
   constructor(private readonly habitsService: HabitsService) {}
+
+  @Get('heatmap')
+  getHeatmap(
+    @GetUser('userId') userId: string,
+    @Query() query: GetHabitsHeatmapQueryDto,
+  ) {
+    return this.habitsService.getHeatmap(userId, query.year);
+  }
 
   @Get()
   getHabits(
