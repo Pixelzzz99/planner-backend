@@ -11,6 +11,7 @@ const mockGoal = {
   userId: 'user-1',
   title: 'Learn NestJS',
   status: GoalStatus.TODO,
+  year: 2026,
   createdAt: new Date(),
 };
 
@@ -24,6 +25,9 @@ const mockPrisma = {
     findUnique: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
+  },
+  focus: {
+    findMany: jest.fn().mockResolvedValue([]),
   },
 };
 
@@ -63,7 +67,12 @@ describe('GoalsService', () => {
 
       const result = await service.createGoal('user-1', { title: 'Learn NestJS' });
 
-      expect(result).toEqual(mockGoal);
+      expect(result).toEqual({
+        ...mockGoal,
+        linkedFocusesTotal: 0,
+        linkedFocusesCompleted: 0,
+        focusProgress: null,
+      });
       expect(mockPrisma.goal.create).toHaveBeenCalledWith({
         data: {
           title: 'Learn NestJS',
@@ -89,7 +98,14 @@ describe('GoalsService', () => {
 
       const result = await service.getUserGoals('user-1');
 
-      expect(result).toEqual([mockGoal]);
+      expect(result).toEqual([
+        {
+          ...mockGoal,
+          linkedFocusesTotal: 0,
+          linkedFocusesCompleted: 0,
+          focusProgress: null,
+        },
+      ]);
     });
   });
 
@@ -115,7 +131,12 @@ describe('GoalsService', () => {
         status: GoalStatus.COMPLETED,
       });
 
-      expect(result.status).toBe(GoalStatus.COMPLETED);
+      expect(result).toMatchObject({
+        status: GoalStatus.COMPLETED,
+        linkedFocusesTotal: 0,
+        linkedFocusesCompleted: 0,
+        focusProgress: null,
+      });
     });
   });
 

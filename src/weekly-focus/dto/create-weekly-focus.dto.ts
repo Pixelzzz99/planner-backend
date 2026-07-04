@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsUUID, ValidateIf } from 'class-validator';
 
 export class CreateWeeklyFocusDto {
   @IsString()
@@ -12,4 +12,9 @@ export class CreateWeeklyFocusDto {
   @IsString()
   @IsOptional()
   status?: 'IN_PROGRESS' | 'COMPLETED' | 'CANCELED';
+
+  @ValidateIf((_, v) => v !== null)
+  @IsOptional()
+  @IsUUID()
+  goalId?: string | null;
 }

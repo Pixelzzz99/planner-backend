@@ -23,6 +23,7 @@ describe('WeeklyFocusService', () => {
   const mockOwnership = {
     assertWeekPlanOwner: jest.fn().mockResolvedValue(undefined),
     assertFocusOwner: jest.fn().mockResolvedValue(undefined),
+    assertGoalOwner: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(async () => {

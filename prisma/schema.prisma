@@ -36,6 +36,7 @@ model Goal {
   status    GoalStatus @default(TODO)
   year      Int        @default(dbgenerated("EXTRACT(YEAR FROM CURRENT_DATE)::int"))
   createdAt DateTime   @default(now())
+  focuses   Focus[]
 }
 
 enum GoalStatus {
@@ -76,9 +77,13 @@ model Focus {
   id          String      @id @default(uuid()) @db.Uuid
   weekPlanId  String      @db.Uuid
   weekPlan    WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  goalId      String?     @db.Uuid
+  goal        Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
   title       String
   description String
   status      FocusStatus @default(IN_PROGRESS)
+
+  @@index([goalId])
 }
 
 model Category {
