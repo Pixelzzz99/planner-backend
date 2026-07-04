@@ -123,6 +123,14 @@ export class TasksService {
       }
 
       const { categoryId, weekPlanId, ...updateData } = data;
+
+      if (weekPlanId) {
+        await this.ownership.assertWeekPlanOwner(weekPlanId, userId);
+      }
+      if (categoryId) {
+        await this.ownership.assertCategoryOwner(categoryId, userId);
+      }
+
       const oldTask = await this.taskRepository.findTaskById(id);
 
       const updateTaskData = {

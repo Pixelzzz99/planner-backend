@@ -7,6 +7,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { YearPlanService } from 'src/year-plan/year-plan.service';
+import * as bcrypt from 'bcrypt';
+
+const userPublicSelect = {
+  id: true,
+  email: true,
+  name: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class UsersService {
@@ -44,7 +53,6 @@ export class UsersService {
       }
       return user;
     } catch (error) {
-      console.error('Error fetching user by id:', error);
       if (error instanceof PrismaClientKnownRequestError) {
         throw new NotFoundException('User not found');
       } else {
@@ -57,7 +65,6 @@ export class UsersService {
     try {
       return await this.prisma.user.findUnique({ where: { email } });
     } catch (error) {
-      console.error('Error fetching user by email:', error);
       if (error instanceof PrismaClientKnownRequestError) {
         throw new NotFoundException('User not found');
       } else {
@@ -66,28 +73,20 @@ export class UsersService {
     }
   }
 
-  async getAllUsers() {
-    try {
-      return await this.prisma.user.findMany({
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-    } catch (error) {
-      console.error('Error fetching all users:', error);
-      throw error;
-    }
-  }
-
   async updateUser(id: string, data: UpdateUserDto) {
     try {
-      return await this.prisma.user.update({ where: { id }, data });
+      const { password, ...rest } = data;
+      const updateData = {
+        ...rest,
+        ...(password && { password: await bcrypt.hash(password, 10) }),
+      };
+
+      return await this.prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: userPublicSelect,
+      });
     } catch (error) {
-      console.error('Error updating user:', error);
       if (error instanceof PrismaClientKnownRequestError) {
         throw new NotFoundException('User not found');
       } else {
@@ -98,9 +97,11 @@ export class UsersService {
 
   async deleteUser(id: string) {
     try {
-      return await this.prisma.user.delete({ where: { id } });
+      return await this.prisma.user.delete({
+        where: { id },
+        select: userPublicSelect,
+      });
     } catch (error) {
-      console.error('Error deleting user:', error);
       if (error instanceof PrismaClientKnownRequestError) {
         throw new NotFoundException('User not found');
       } else {

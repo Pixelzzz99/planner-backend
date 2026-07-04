@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -22,6 +23,27 @@ const mockUsersService = {
 
 const mockJwtService = {
   sign: jest.fn().mockReturnValue('jwt-token'),
+  decode: jest.fn().mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 3600 }),
+};
+
+const revokedTokens = new Map<string, { expiresAt: Date }>();
+
+const mockPrismaService = {
+  revokedToken: {
+    upsert: jest.fn(({ where, create }) => {
+      revokedTokens.set(where.tokenHash, {
+        expiresAt: create.expiresAt,
+      });
+      return Promise.resolve(create);
+    }),
+    findUnique: jest.fn(({ where }) => {
+      const entry = revokedTokens.get(where.tokenHash);
+      return Promise.resolve(
+        entry ? { tokenHash: where.tokenHash, ...entry } : null,
+      );
+    }),
+    deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+  },
 };
 
 describe('AuthService', () => {
@@ -29,12 +51,14 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    revokedTokens.clear();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: mockUsersService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
@@ -103,15 +127,15 @@ describe('AuthService', () => {
     it('invalidates token after logout', async () => {
       const token = 'some-jwt-token';
 
-      expect(service.isTokenInvalid(token)).toBe(false);
+      expect(await service.isTokenInvalid(token)).toBe(false);
 
       await service.logout(token);
 
-      expect(service.isTokenInvalid(token)).toBe(true);
+      expect(await service.isTokenInvalid(token)).toBe(true);
     });
 
-    it('returns false for unknown token', () => {
-      expect(service.isTokenInvalid('never-logged-out')).toBe(false);
+    it('returns false for unknown token', async () => {
+      expect(await service.isTokenInvalid('never-logged-out')).toBe(false);
     });
   });
 

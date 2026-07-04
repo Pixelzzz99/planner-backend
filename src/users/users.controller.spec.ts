@@ -7,7 +7,6 @@ const mockUser = { id: 'user-1', email: 'a@b.com', name: 'A' };
 const mockUsersService = {
   createUser: jest.fn().mockResolvedValue(mockUser),
   getUserById: jest.fn().mockResolvedValue(mockUser),
-  getAllUsers: jest.fn().mockResolvedValue([mockUser]),
   updateUser: jest.fn().mockResolvedValue(mockUser),
   deleteUser: jest.fn().mockResolvedValue(mockUser),
 };

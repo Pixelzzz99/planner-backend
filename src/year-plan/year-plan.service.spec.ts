@@ -15,6 +15,7 @@ const mockPrisma = {
   user: { findUnique: jest.fn() },
   yearPlan: {
     findMany: jest.fn(),
+    findUnique: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
   },
@@ -72,7 +73,7 @@ describe('YearPlanService', () => {
 
     it('returns existing year plan if already exists', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrisma.yearPlan.findMany.mockResolvedValue([mockYearPlan]);
+      mockPrisma.yearPlan.findUnique.mockResolvedValue(mockYearPlan);
 
       const result = await service.create('user-1');
 
@@ -82,7 +83,7 @@ describe('YearPlanService', () => {
 
     it('creates year plan with 12 months for new user', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrisma.yearPlan.findMany.mockResolvedValue([]);
+      mockPrisma.yearPlan.findUnique.mockResolvedValue(null);
       mockPrisma.yearPlan.create.mockResolvedValue(mockYearPlan);
 
       const result = await service.create('user-1');

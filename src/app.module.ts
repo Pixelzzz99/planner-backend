@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { GoalsModule } from './goals/goals.module';
@@ -14,6 +16,12 @@ import { RecurringTasksModule } from './recurring-tasks/recurring-tasks.module';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 120,
+      },
+    ]),
     OwnershipModule,
     PrismaModule,
     UsersModule,
@@ -28,6 +36,11 @@ import { RecurringTasksModule } from './recurring-tasks/recurring-tasks.module';
     RecurringTasksModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

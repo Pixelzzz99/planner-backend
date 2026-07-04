@@ -5,6 +5,7 @@ import { CategoriesService } from 'src/categories/categories.service';
 import {
   InternalServerErrorException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   WeekPlanNotFoundException,
@@ -50,6 +51,7 @@ const mockTaskRepository = {
 const mockOwnership = {
   assertWeekPlanOwner: jest.fn().mockResolvedValue(undefined),
   assertTaskOwner: jest.fn().mockResolvedValue(undefined),
+  assertCategoryOwner: jest.fn().mockResolvedValue(undefined),
 };
 
 describe('TasksService', () => {
@@ -115,6 +117,40 @@ describe('TasksService', () => {
       });
 
       expect(result.title).toBe('Updated');
+    });
+
+    it('checks week plan ownership when moving task', async () => {
+      mockTaskRepository.findTaskById.mockResolvedValue(mockTask);
+      mockTaskRepository.updateTask.mockResolvedValue(mockTask);
+      mockOwnership.assertWeekPlanOwner.mockRejectedValue(
+        new ForbiddenException('Access denied'),
+      );
+
+      await expect(
+        service.updateTask('task-1', 'user-1', { weekPlanId: 'other-week' }),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockOwnership.assertWeekPlanOwner).toHaveBeenCalledWith(
+        'other-week',
+        'user-1',
+      );
+    });
+
+    it('checks category ownership when changing category', async () => {
+      mockTaskRepository.findTaskById.mockResolvedValue(mockTask);
+      mockTaskRepository.updateTask.mockResolvedValue(mockTask);
+      mockOwnership.assertCategoryOwner.mockRejectedValue(
+        new ForbiddenException('Access denied'),
+      );
+
+      await expect(
+        service.updateTask('task-1', 'user-1', { categoryId: 'other-cat' }),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(mockOwnership.assertCategoryOwner).toHaveBeenCalledWith(
+        'other-cat',
+        'user-1',
+      );
     });
   });
 

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { MonthPlanService } from 'src/month-plan/month-plan.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class YearPlanService {
@@ -36,11 +37,11 @@ export class YearPlanService {
 
     const targetYear = year ?? new Date().getFullYear();
 
-    const existing = await this.prisma.yearPlan.findMany({
-      where: { userId, year: targetYear },
+    const existing = await this.prisma.yearPlan.findUnique({
+      where: { userId_year: { userId, year: targetYear } },
     });
-    if (existing.length > 0) {
-      return existing[0];
+    if (existing) {
+      return existing;
     }
 
     try {
@@ -50,6 +51,15 @@ export class YearPlanService {
       await this.monthPlan.createMonthPlan(yearPlan.id);
       return yearPlan;
     } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const duplicate = await this.prisma.yearPlan.findUnique({
+          where: { userId_year: { userId, year: targetYear } },
+        });
+        if (duplicate) return duplicate;
+      }
       throw new InternalServerErrorException('Failed to create year plan');
     }
   }

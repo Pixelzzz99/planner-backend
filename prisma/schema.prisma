@@ -50,6 +50,8 @@ model YearPlan {
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   year   Int
   months MonthPlan[]
+
+  @@unique([userId, year])
 }
 
 model MonthPlan {
@@ -180,4 +182,12 @@ model HabitLog {
 
   @@unique([habitId, date])
   @@index([habitId, date])
+}
+
+model RevokedToken {
+  tokenHash String   @id @db.VarChar(64)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
 }
